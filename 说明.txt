@@ -1,0 +1,17 @@
+battle-game/
+├── index.html                 # 主HTML文件
+├── css/
+│   └── style.css             # 所有样式
+├── js/
+│   ├── main.js               # 主逻辑
+│   ├── utils.js              # 工具函数
+│   ├── character.js          # 角色基类
+│   └── characters/           # 角色专属实现
+│       ├── ackerman.js       # 示例角色
+│       ├── aaa.js            # 示例角色
+│       └──  ........
+
+添加新角色步骤：
+1.在 js/characters/ 目录下创建新文件，例如 new_character.js
+2.根据模版创建角色，这里模版位于js/characters/model.js
+3.在index.html加入<script src="js/characters/new_character.js"></script>

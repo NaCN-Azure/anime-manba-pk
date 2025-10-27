@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NVN 角色对战</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <h1>NVN 角色对战</h1>
+
+    <div class="controls">
+        <label>模式：
+            <select id="mode">
+                <option value="1">1v1</option>
+                <option value="2">2v2</option>
+                <option value="3">3v3</option>
+                <option value="4">4v4</option>
+                <option value="5">5v5</option>
+            </select>
+        </label>
+        <button id="startBattle">开始战斗</button>
+        <button id="addCustomChar">新建角色</button>
+    </div>
+
+    <div class="team-selector">
+        <div class="team-header">队伍A</div>
+        <div id="teamA-selectors"></div>
+    </div>
+
+    <div class="team-selector">
+        <div class="team-header">队伍B</div>
+        <div id="teamB-selectors"></div>
+    </div>
+
+    <div id="teams"></div>
+    <div id="log"></div>
+
+    <!-- 工具和基类 -->
+    <script src="js/utils.js"></script>
+    <script src="js/character.js"></script>
+    
+    <!-- 角色实现 -->
+    <script src="js/characters/aaa.js"></script>
+    <script src="js/characters/akeman.js"></script>
+    <script src="js/characters/bench.js"></script>
+    <script src="js/characters/huangye.js"></script>
+    <script src="js/characters/xiaomo.js"></script> 
+    <script src="js/characters/dongji.js"></script>
+    <script src="js/characters/yunli.js"></script>
+    <script src="js/characters/setsuna.js"></script>
+    <script src="js/characters/robin.js"></script>
+    <script src="js/characters/legeng.js"></script>
+    <script src="js/characters/johnson.js"></script>
+    <script src="js/characters/zhanlan.js"></script> 
+    
+    <script src="js/characters/naitang.js"></script>
+    <script src="js/characters/tangtang.js"></script>
+    <script src="js/characters/tanghuang.js"></script>
+    
+    <!-- 主逻辑 -->
+    <script src="js/main.js"></script>
+</body>
+</html>
