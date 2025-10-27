@@ -1,0 +1,4010 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NVN 角色对战 - 完整版</title>
+    <style>
+/* ===== CSS样式 ===== */
+body {
+    font-family: Arial, Helvetica, sans-serif;
+    background: #111;
+    color: #eee;
+    margin: 0;
+    padding: 10px;
+  }
+  
+  h1 {
+    color: #0ff;
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  
+  h2 {
+    margin: 5px 0;
+    color: #0ff;
+  }
+  
+  button {
+    margin: 3px;
+    padding: 6px 10px;
+    background: #222;
+    color: #0ff;
+    border: 1px solid #0ff;
+    cursor: pointer;
+    border-radius: 4px;
+  }
+  
+  button:hover {
+    background: #333;
+  }
+  
+  select, input {
+    background: #222;
+    color: #0ff;
+    border: 1px solid #0ff;
+    padding: 4px;
+    border-radius: 4px;
+  }
+  
+  #log {
+    height: 200px;
+    overflow-y: auto;
+    background: #000;
+    border: 1px solid #0ff;
+    padding: 5px;
+    margin-top: 5px;
+    font-size: 12px;
+  }
+  
+  .team {
+    display: inline-block;
+    vertical-align: top;
+    margin: 5px;
+    padding: 5px;
+    border: 1px solid #0ff;
+    background: #181818;
+    width: 220px;
+    border-radius: 4px;
+  }
+  
+  .name {
+    font-weight: bold;
+    color: #0ff;
+  }
+  
+  .controls {
+    background: #222;
+    padding: 10px;
+    border-radius: 4px;
+    margin-bottom: 10px;
+    border: 1px solid #0ff;
+  }
+  
+  .team-selector {
+    margin-bottom: 10px;
+  }
+  
+  .team-header {
+    color: #0ff;
+    margin-bottom: 5px;
+  }
+  
+  .char-selector {
+    margin-bottom: 5px;
+  }
+  
+  .char {
+    margin-bottom: 10px;
+    padding: 5px;
+    border-bottom: 1px solid #333;
+  }
+  
+  .special-turn {
+    background: #1a2a1a;
+    padding: 3px;
+    margin: 2px 0;
+    border-left: 3px solid #0ff;
+  }
+  
+  .team-a {
+    color: #ff6b6b;
+  }
+  
+  .team-b {
+    color: #6b8cff;
+  }
+  
+  .holy-wall {
+    background: rgba(255, 255, 0, 0.1);
+    border-left: 3px solid gold;
+    padding: 3px;
+    margin: 2px 0;
+  }
+  
+  .energy-saving {
+    background: rgba(0, 255, 0, 0.1);
+    border-left: 3px solid #0f0;
+    padding: 3px;
+    margin: 2px 0;
+  }
+  
+  .frost-domain {
+    background: rgba(0, 191, 255, 0.1);
+    border-left: 3px solid #00bfff;
+    padding: 3px;
+    margin: 2px 0;
+  }
+  
+  .sacred-throw {
+    background: rgba(255, 215, 0, 0.1);
+    border-left: 3px solid gold;
+    padding: 3px;
+    margin: 2px 0;
+  }
+  
+  .assassin {
+    background: rgba(128, 0, 128, 0.1);
+    border-left: 3px solid purple;
+    padding: 3px;
+    margin: 2px 0;
+  }
+  
+  .healer {
+    background: rgba(255, 192, 203, 0.1);
+    border-left: 3px solid pink;
+    padding: 3px;
+    margin: 2px 0;
+  }
+  
+  .happy {
+    background: rgba(255, 255, 0, 0.1);
+    border-left: 3px solid yellow;
+    padding: 3px;
+    margin: 2px 0;
+  }
+  
+  .light-sword {
+    background: rgba(255, 165, 0, 0.1);
+    border-left: 3px solid orange;
+    padding: 3px;
+    margin: 2px 0;
+  }
+  
+  .dragon {
+    background: rgba(255, 0, 0, 0.1);
+    border-left: 3px solid red;
+    padding: 3px;
+    margin: 2px 0;
+  }
+    </style>
+</head>
+<body>
+    <h1>NVN 角色对战</h1>
+
+    <div class="controls">
+        <label>模式：
+            <select id="mode">
+                <option value="1">1v1</option>
+                <option value="2">2v2</option>
+                <option value="3">3v3</option>
+                <option value="4">4v4</option>
+                <option value="5">5v5</option>
+            </select>
+        </label>
+        <button id="startBattle">开始战斗</button>
+        <button id="addCustomChar">新建角色</button>
+    </div>
+
+    <div class="team-selector">
+        <div class="team-header">队伍A</div>
+        <div id="teamA-selectors"></div>
+    </div>
+
+    <div class="team-selector">
+        <div class="team-header">队伍B</div>
+        <div id="teamB-selectors"></div>
+    </div>
+
+    <div id="teams"></div>
+    <div id="log"></div>
+
+    <script>
+// ===== 合并的JavaScript代码 =====
+
+
+// === js/utils.js ===
+/* ---------- 工具函数 ---------- */
+const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+const rand = n => Math.floor(Math.random() * n);
+const roll = r => Math.random() * 100 < r;
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+// 日志函数
+function log(msg) {
+  const box = document.getElementById("log");
+  box.innerHTML += msg + "<br>";
+  box.scrollTop = box.scrollHeight;
+}
+
+// 角色数据库
+const DB = {};
+
+// === js/character.js ===
+/* ---------- 角色基类 ---------- */
+class Character {
+  constructor(name, base) {
+    this.name = name;
+    this.side = "";
+    
+    // 初始化所有可能用到的属性
+    Object.assign(this, {
+      dmg: 1, mpBack: 0, dark: 0, light: 0, pen: 0, regen: 0, hit: 0, hide: 0, dodge: 0,
+      steal: 1, parseRate: 0, lockHP: 0, femaleDmg: 1, maleBuff: 1, jelly: 0, alcohol: 0,
+      form: 0, shard: 0, deathOnce: 0, curseStackDmg: 0, lightEnemyDmg: 0, critPen: 0,
+      nightSpd: 0, nightSteal: 0, darkSteal: 0, defStack: 0, defStackMax: 0, defStacks: 0,
+      darkPen: 0, lightHeal: 0, mpBackDark: 0, mpBackLight: 0, waterCD: 0, otherCD: 0,
+      mpBackWater: 0, mpBackOther: 0, healLow: 0, healAmount: 0, waterReduce: 0,
+      healParse: 0, healHP: 0, healMP: 0, shardFromAlly: 0, shardToHeal: 0,
+      memoryResist: 0, darkParse: 0, hideCrit: 0, mpBackHide: 0, mpBackAby: 0,
+      lowDefDmg: 0, startHide: 0, startMark: 0, killAtk: 0, killAtkMax: 0,
+      dmgToMP: 0, femaleHit: 0, femaleControlImmune: 0, femaleKillAtk: 0, femaleKillMax: 0,
+      maleAllyAtk: 0, maleAllyDef: 0, maleAllyHeal: 0, maleSave: 0, femaleSkip: 0,
+      femaleCD: 0, femaleAllReduce: 0, jellyDef: 0, jellyAtk: 0, jellyCompensate: 0,
+      jellyMP: 0, healMP: 0, seaDmgReduce: 0, seaMarkDmg: 0, sandMax: 0, terrainDef: 0,
+      terrainMax: 0, allySandDmg: 0, reviveHP: 0, reviveReset: 0, songMP: 0, domainMP: 0,
+      mainSongExtra: 0, subSongExtra: 0, randomSkills: 0, ultimateLimit: 0,
+      currentSkills: [], sameFormBonus: 0, elementalEyeActive: false,
+      currentTurnSkills: [], originalCD: 200, hasReflect: false, reflectDamage: 0,
+      isInvincible: false, holyShieldStrength: 0, sanctuaryActive: false,
+      sanctuaryTurns: 0, sanctuaryTarget: null, damageTakenThisTurn: 0,
+      damageConverted: 0, reflectMax: 0, allyDefBonus: 0, maxAllyDefBonus: 0,
+      focusTarget: null
+    });
+    
+    Object.assign(this, JSON.parse(JSON.stringify(base)));
+    this.maxhp = this.hp;
+    this.maxmp = this.mp;
+    this.buffs = {};
+    this.debuffs = {};
+    this.cooldowns = {};
+    this.immune = new Set();
+    
+    // 初始化角色专属方法
+    this.skillImpl = {};
+    this.turnImpl = null;
+    
+    if (base.passive) base.passive(this);
+    
+    /* 专属加成 */
+    if (this.con) this.dmg *= 1.4;
+    if (this.ele) this.dmg *= 1.35;
+    if (this.mem) this.dur *= 1.46;
+    if (this.aby) { this.dmg *= 1.5; this.hide = 1; }
+    if (this.sand) this.dmg *= 1.3;
+    if (this.song) this.dmg *= 1.42;
+    if (this.holy) this.holyShieldStrength = this.holy;
+    if (this.energy) this.dmg *= 1.55;
+    if (this.frost) this.dmg *= 1.4;
+    if (this.sacred) this.dmg *= 1.48;
+    if (this.dual) this.dmg *= 1.4;
+    if (this.happy) this.dmg *= 1.38;
+    if (this.light) this.dmg *= 1.4;
+    if (this.element) this.dmg *= 1.55;
+  }
+  
+  getDisplayName() {
+    const teamClass = this.side === "A" ? "team-a" : "team-b";
+    return `<span class="${teamClass}">[${this.side}]${this.name}</span>`;
+  }
+  
+  resetCD() { this.cooldowns = {}; }
+  canUse(s) { return (this.cooldowns[s.n] || 0) <= 0 && this.mp >= s.mp; }
+  crit() { return roll(this.cr) ? (this.cd || 200) / 100 : 1; }
+  
+  // 处理伤害和护盾
+  processDamage(damage, attacker, skillName) {
+    if (this.isInvincible) {
+      log(`${this.getDisplayName()} 处于无敌状态，免疫了 ${attacker.getDisplayName()} 的 ${skillName} 伤害`);
+      return 0;
+    }
+    
+    let remainingDamage = damage;
+    
+    // 处理所有护盾buff
+    Object.keys(this.buffs).forEach(buffKey => {
+      if (remainingDamage <= 0) return;
+      
+      const buff = this.buffs[buffKey];
+      if (typeof buff.val === 'number' && buff.val > 0) {
+        if (buff.val >= remainingDamage) {
+          buff.val -= remainingDamage;
+          remainingDamage = 0;
+          log(`${this.getDisplayName()} 的 ${buffKey} 吸收了 ${damage} 点伤害，剩余护盾值: ${buff.val}`);
+        } else {
+          remainingDamage -= buff.val;
+          log(`${this.getDisplayName()} 的 ${buffKey} 被击破，吸收了 ${buff.val} 点伤害`);
+          buff.val = 0;
+        }
+      }
+    });
+    
+    // 清除值为0的护盾
+    Object.keys(this.buffs).forEach(key => {
+      if (this.buffs[key].val === 0) {
+        delete this.buffs[key];
+      }
+    });
+    
+    if (remainingDamage <= 0) return 0;
+    
+    // 计算实际伤害
+    const reduction = this.def / (this.def + 1000);
+    let actualDamage = Math.floor(remainingDamage * (1 - reduction));
+    
+    this.hp = clamp(this.hp - actualDamage, 0, this.maxhp);
+    
+    // 检查反伤状态
+    if (this.hasReflect && actualDamage > 0) {
+      const reflectDmg = Math.floor(this.reflectDamage);
+      attacker.hp = clamp(attacker.hp - reflectDmg, 0, attacker.maxhp);
+      log(`${this.getDisplayName()} 反弹 ${reflectDmg} 伤害给 ${attacker.getDisplayName()}`);
+    }
+    
+    return actualDamage;
+  }
+  
+  useSkill(s, target, field) {
+    if (!this.canUse(s)) return false;
+    this.mp -= s.mp;
+    this.cooldowns[s.n] = s.c;
+    
+    // 检查是否有专属技能实现
+    if (this.skillImpl && this.skillImpl[s.n]) {
+      return this.skillImpl[s.n].call(this, s, target, field);
+    }
+    
+    // 默认伤害技能处理
+    if (s.d !== 0) {
+      const base = this.atk * (s.d < 0 ? -s.d : s.d);
+      if (s.d < 0) { // 治疗
+        let v = Math.floor(base * this.dmg * this.crit());
+        target.hp = clamp(target.hp + v, 0, target.maxhp);
+        log(`${this.getDisplayName()} 治疗 ${target.getDisplayName()} ${v} HP`);
+      } else { // 伤害
+        let pen = 1 - target.def / (target.def + 1000);
+        let damage = Math.floor(base * pen * this.dmg * this.crit());
+        const actualDamage = target.processDamage(damage, this, s.n);
+        if (actualDamage > 0) {
+          log(`${this.getDisplayName()} 使用 ${s.n} 对 ${target.getDisplayName()} 造成 ${actualDamage} 伤害`);
+        }
+      }
+    } else {
+      log(`${this.getDisplayName()} 使用 ${s.n}`);
+    }
+    
+    return true;
+  }
+  
+  turn(field) {
+    window.currentBattleField = field;
+    
+    // 执行角色专属回合逻辑
+    if (this.turnImpl && typeof this.turnImpl === 'function') {
+      this.turnImpl.call(this, field);
+    }
+    
+    /* 被动回血 */
+    if (this.regen > 0) {
+      const v = Math.floor(this.regen);
+      this.hp = clamp(this.hp + v, 0, this.maxhp);
+      log(`${this.getDisplayName()} 被动回复 ${v} HP`);
+    }
+    
+    /* 持续伤害 */
+    ["流血", "灼烧", "割裂"].forEach(k => {
+      if (!this.debuffs[k]) return;
+      const v = this.debuffs[k].val;
+      this.hp = clamp(this.hp - v, 0, this.maxhp);
+      log(`${this.getDisplayName()} ${k} ${v} HP`);
+    });
+    
+    /* buff/debuff 倒计时 */
+    Object.keys(this.buffs).forEach(k => {
+      this.buffs[k].st--;
+      if (this.buffs[k].st <= 0) {
+        if (k === "无敌") this.isInvincible = false;
+        if (k === "冰棱护盾") this.hasReflect = false;
+        delete this.buffs[k];
+      }
+    });
+    
+    Object.keys(this.debuffs).forEach(k => {
+      this.debuffs[k].st--;
+      if (this.debuffs[k].st <= 0) delete this.debuffs[k];
+    });
+    
+    Object.keys(this.cooldowns).forEach(k => {
+      this.cooldowns[k]--;
+    });
+    
+    // 重置当前回合技能记录
+    this.currentTurnSkills = [];
+  }
+  
+  chooseAction(enemies) {
+    const skills = this.skills.filter(s => this.canUse(s));
+    if (skills.length === 0) return { act: "pass" };
+    
+    // 简单AI：优先使用治疗/护盾技能当队友血量低时
+    const allies = window.currentBattleField.filter(x => x.side === this.side && x.hp > 0);
+    const lowHPAllies = allies.filter(a => a.hp < a.maxhp * 0.5);
+    
+    if (lowHPAllies.length > 0 && this.skills.some(s => s.d < 0)) {
+      const healSkills = skills.filter(s => s.d < 0);
+      if (healSkills.length > 0) {
+        const s = healSkills[rand(healSkills.length)];
+        const t = lowHPAllies[rand(lowHPAllies.length)];
+        return { act: "skill", skill: s, target: t };
+      }
+    }
+    
+    // 默认攻击
+    const s = skills[rand(skills.length)];
+    const t = enemies[rand(enemies.length)];
+    return { act: "skill", skill: s, target: t };
+  }
+  
+  report() {
+    const cdtxt = Object.keys(this.cooldowns).filter(k => this.cooldowns[k] > 0).map(k => `${k}:${this.cooldowns[k]}`).join(" ");
+    return `${this.getDisplayName()} HP:${this.hp}/${this.maxhp} MP:${this.mp}/${this.maxmp} ATK:${this.atk} DEF:${this.def} ${cdtxt}`;
+  }
+}
+
+// === js/characters/aaa.js ===
+// AAA 角色实现
+DB["AAA"] = {
+    hp: 14000,
+    mp: 9500,
+    atk: 2000,
+    def: 1500,
+    spd: 160,
+    cr: 35,
+    cd: 210,
+    energy: 550,
+    skills: [
+        { n: "微光点疗", c: 1, mp: 126, d: -2.79, e: "单体治疗", s: 0 },
+        { n: "泛光群疗", c: 2, mp: 157.5, d: -1.86, e: "群体治疗", s: 0 },
+        { n: "急救瞬疗", c: 3, mp: 180, d: -3.875, e: "单体急救", s: 0 },
+        { n: "节能祝福", c: 2, mp: 135, d: 0, e: "群体减耗", s: 0 },
+        { n: "微光护盾", c: 2, mp: 144, d: 0, e: "群体护盾", s: 0 },
+        { n: "余波回收", c: 1, mp: 0, d: 0, e: "自身回蓝", s: 0 },
+        { n: "节能・全域祈光", c: 6, mp: 360, d: -5.425, e: "终极治疗", s: 0 }
+    ],
+    passive(c) {
+        c.energyEfficiency = 55; // 节能效率55%
+        c.mpRecovery = 90; // 回收90%MP消耗
+        c.energyLayers = 0; // 节能层数
+        c.maxEnergyLayers = 4; // 最大节能层数
+        c.energyLayerBonus = 12; // 每层降低MP消耗12%
+        c.healBonusPerLayer = 8; // 每层治疗量提升8%
+        c.lockHP = 1; // 免死机制
+        c.deathOnce = 1;
+        
+        // 微光守护触发条件
+        c.microLightGuardTriggers = 4;
+        c.microLightGuardUsed = 0;
+        
+        // 设置技能实现
+        c.skillImpl = {
+            "微光点疗": function(s, target, field) {
+                const heal = Math.floor(this.atk * 1.8 * 1.55);
+                target.hp = clamp(target.hp + heal, 0, target.maxhp);
+                // 回收MP
+                const mpBack = Math.floor(s.mp * 0.9);
+                this.mp = clamp(this.mp + mpBack, 0, this.maxmp);
+                log(`<div class="energy-saving">${this.getDisplayName()} 使用微光点疗治疗 ${target.getDisplayName()} ${heal} HP，回收 ${mpBack} MP</div>`);
+                
+                // 节能层叠加
+                this.energyLayers = Math.min(this.energyLayers + 1, this.maxEnergyLayers);
+                return true;
+            },
+            
+            "泛光群疗": function(s, target, field) {
+                const heal = Math.floor(this.atk * 1.2 * 1.55);
+                const allies = field.filter(x => x.side === this.side);
+                allies.forEach(ally => {
+                    ally.hp = clamp(ally.hp + heal, 0, ally.maxhp);
+                });
+                const mpBack = Math.floor(s.mp * 0.9);
+                this.mp = clamp(this.mp + mpBack, 0, this.maxmp);
+                log(`<div class="energy-saving">${this.getDisplayName()} 使用泛光群疗治疗全体友军 ${heal} HP，回收 ${mpBack} MP</div>`);
+                
+                this.energyLayers = Math.min(this.energyLayers + 1, this.maxEnergyLayers);
+                return true;
+            },
+            
+            "节能祝福": function(s, target, field) {
+                const allies = field.filter(x => x.side === this.side);
+                allies.forEach(ally => {
+                    ally.buffs["节能祝福"] = { st: 3, val: 30 }; // MP消耗-30%
+                });
+                const mpBack = Math.floor(s.mp * 0.9);
+                this.mp = clamp(this.mp + mpBack, 0, this.maxmp);
+                log(`<div class="energy-saving">${this.getDisplayName()} 使用节能祝福，全队MP消耗-30%，回收 ${mpBack} MP</div>`);
+                
+                this.energyLayers = Math.min(this.energyLayers + 1, this.maxEnergyLayers);
+                return true;
+            },
+            
+            "微光护盾": function(s, target, field) {
+                const shield = Math.floor(this.atk * 1.6 * 1.55);
+                const allies = field.filter(x => x.side === this.side);
+                allies.forEach(ally => {
+                    ally.buffs["微光护盾"] = { st: 2, val: shield };
+                });
+                const mpBack = Math.floor(s.mp * 0.9);
+                this.mp = clamp(this.mp + mpBack, 0, this.maxmp);
+                log(`<div class="energy-saving">${this.getDisplayName()} 使用微光护盾，全队获得 ${shield} 点护盾，回收 ${mpBack} MP</div>`);
+                
+                this.energyLayers = Math.min(this.energyLayers + 1, this.maxEnergyLayers);
+                return true;
+            },
+            
+            "余波回收": function(s, target, field) {
+                const mpBack = Math.floor(this.maxmp * 0.05);
+                this.mp = clamp(this.mp + mpBack, 0, this.maxmp);
+                if (this.energyLayers >= 4) {
+                    const hpBack = Math.floor(this.maxhp * 0.08);
+                    this.hp = clamp(this.hp + hpBack, 0, this.maxhp);
+                    log(`<div class="energy-saving">${this.getDisplayName()} 使用余波回收，恢复 ${mpBack} MP 和 ${hpBack} HP</div>`);
+                } else {
+                    log(`<div class="energy-saving">${this.getDisplayName()} 使用余波回收，恢复 ${mpBack} MP</div>`);
+                }
+                return true;
+            },
+            
+            "节能・全域祈光": function(s, target, field) {
+                const heal = Math.floor(this.atk * 3.5 * 1.55);
+                const mpRestore = 0.2; // 20%最大MP
+                const allies = field.filter(x => x.side === this.side);
+                
+                allies.forEach(ally => {
+                    ally.hp = clamp(ally.hp + heal, 0, ally.maxhp);
+                    ally.mp = clamp(ally.mp + ally.maxmp * mpRestore, 0, ally.maxmp);
+                    ally.buffs["全域节能"] = { st: 3, val: 45 }; // MP消耗-45%
+                });
+                
+                this.buffs["节能巅峰"] = { st: 5, val: 40 }; // 治疗量+40%
+                this.energyLayers = 4;
+                
+                log(`<div class="energy-saving">${this.getDisplayName()} 使用节能・全域祈光，全队恢复 ${heal} HP 和 20% MP，进入节能巅峰状态</div>`);
+                return true;
+            }
+        };
+        
+        // 设置回合逻辑
+        c.turnImpl = function(field) {
+            // 节能层效果
+            if (this.energyLayers > 0) {
+                const mpReduce = this.energyLayers * this.energyLayerBonus;
+                const healBonus = this.energyLayers * this.healBonusPerLayer;
+                this.buffs["节能层"] = { st: 1, val: mpReduce };
+                this.buffs["治疗加成"] = { st: 1, val: healBonus };
+            }
+            
+            // 微光守护触发
+            const lowHPAllies = field.filter(x => x.side === this.side && x.hp < x.maxhp * 0.25 && x.hp > 0);
+            const lowMPAllies = field.filter(x => x.side === this.side && x.mp < x.maxmp * 0.15 && x.mp > 0);
+            
+            if ((lowHPAllies.length > 0 || lowMPAllies.length > 0) && this.microLightGuardUsed < this.microLightGuardTriggers) {
+                const target = lowHPAllies[0] || lowMPAllies[0];
+                target.hp = clamp(target.hp + target.maxhp * 0.3, 0, target.maxhp);
+                target.buffs["节能庇护"] = { st: 3, val: 35 }; // MP消耗-35%
+                
+                if (target.mp < target.maxmp * 0.15) {
+                    target.mp = clamp(target.mp + target.maxmp * 0.2, 0, target.maxmp);
+                }
+                
+                this.microLightGuardUsed++;
+                log(`<div class="energy-saving">${this.getDisplayName()} 触发微光守护，保护 ${target.getDisplayName()}</div>`);
+            }
+        };
+        
+        log(`<div class="energy-saving">${c.getDisplayName()} 节能圣职者激活，节能效率: ${c.energyEfficiency}%</div>`);
+    }
+};
+
+// === js/characters/akeman.js ===
+// 阿克曼 角色实现
+DB["阿克曼"] = {
+    hp: 18000,
+    mp: 9500,
+    atk: 2000,
+    def: 1200,
+    spd: 170,
+    cr: 35,
+    cd: 280,
+    con: 400,
+    skills: [
+        { n: "迟缓诅咒", c: 2, mp: 220, d: 0.8 * 1.4, e: "迟缓", s: 1 },
+        { n: "流血诅咒", c: 3, mp: 280, d: 1 * 1.4, e: "流血", s: 1 },
+        { n: "腐蚀诅咒", c: 4, mp: 350, d: 0.9 * 1.4, e: "腐蚀", s: 1 },
+        { n: "暗黑冲击", c: 3, mp: 320, d: 1.5 * 1.4, e: "引爆", s: 1 },
+        { n: "暗影洪流", c: 5, mp: 400, d: 1.2 * 1.4, e: "暗影", s: 1 },
+        { n: "怨灵召唤", c: 6, mp: 450, d: 0, e: "召唤", s: 0 },
+        { n: "深渊诅咒领域", c: 8, mp: 800, d: 2 * 1.4, e: "领域", s: 2 }
+    ],
+    passive(c) {
+        c.dmg *= 1.4;
+        c.mpBack = 35;
+        c.immune.add("控制");
+        c.dark = 60;
+        c.curseStackDmg = 8; // 每层诅咒伤害+8%
+        c.lightEnemyDmg = 60; // 对光明敌人伤害+60%
+        c.critPen = 30; // 暴击无视30%防御
+        c.immune.add("迟缓");
+        c.immune.add("沉默");
+        c.immune.add("封印");
+        
+        // 设置技能实现
+        c.skillImpl = {
+            "迟缓诅咒": function(s, target, field) {
+                const damage = Math.floor(this.atk * s.d * this.crit());
+                const actualDamage = target.processDamage(damage, this, s.n);
+                if (actualDamage > 0) {
+                    log(`${this.getDisplayName()} 使用迟缓诅咒对 ${target.getDisplayName()} 造成 ${actualDamage} 伤害`);
+                }
+                target.debuffs["迟缓"] = { st: 3, val: 40 }; // 减速40%
+                target.debuffs["诅咒"] = { st: 4, val: (target.debuffs["诅咒"]?.val || 0) + 1 };
+                return true;
+            },
+            
+            "流血诅咒": function(s, target, field) {
+                const damage = Math.floor(this.atk * s.d * this.crit());
+                const actualDamage = target.processDamage(damage, this, s.n);
+                if (actualDamage > 0) {
+                    log(`${this.getDisplayName()} 使用流血诅咒对 ${target.getDisplayName()} 造成 ${actualDamage} 伤害`);
+                }
+                target.debuffs["流血"] = { st: 3, val: Math.floor(this.atk * 0.3) };
+                target.debuffs["诅咒"] = { st: 4, val: (target.debuffs["诅咒"]?.val || 0) + 1 };
+                return true;
+            },
+            
+            "腐蚀诅咒": function(s, target, field) {
+                const damage = Math.floor(this.atk * s.d * this.crit());
+                const actualDamage = target.processDamage(damage, this, s.n);
+                if (actualDamage > 0) {
+                    log(`${this.getDisplayName()} 使用腐蚀诅咒对 ${target.getDisplayName()} 造成 ${actualDamage} 伤害`);
+                }
+                target.debuffs["腐蚀"] = { st: 3, val: 25 }; // 防御-25%
+                target.debuffs["诅咒"] = { st: 4, val: (target.debuffs["诅咒"]?.val || 0) + 1 };
+                return true;
+            },
+            
+            "暗黑冲击": function(s, target, field) {
+                const curseStacks = target.debuffs["诅咒"]?.val || 0;
+                const baseDamage = this.atk * s.d * this.crit();
+                const curseBonus = 1 + (curseStacks * this.curseStackDmg / 100);
+                const damage = Math.floor(baseDamage * curseBonus);
+                const actualDamage = target.processDamage(damage, this, s.n);
+                if (actualDamage > 0) {
+                    log(`${this.getDisplayName()} 使用暗黑冲击对 ${target.getDisplayName()} 造成 ${actualDamage} 伤害，引爆 ${curseStacks} 层诅咒`);
+                }
+                delete target.debuffs["诅咒"];
+                return true;
+            },
+            
+            "深渊诅咒领域": function(s, target, field) {
+                this.buffs["深渊领域"] = { st: 5, val: 30 }; // 全诅咒效果+30%
+                const enemies = field.filter(x => x.side !== this.side && x.hp > 0);
+                
+                enemies.forEach(enemy => {
+                    const damage = Math.floor(this.atk * s.d * this.crit());
+                    const actualDamage = enemy.processDamage(damage, this, s.n);
+                    if (actualDamage > 0) {
+                        log(`${this.getDisplayName()} 使用深渊诅咒领域对 ${enemy.getDisplayName()} 造成 ${actualDamage} 伤害`);
+                    }
+                    enemy.debuffs["诅咒"] = { st: 5, val: (enemy.debuffs["诅咒"]?.val || 0) + 2 };
+                });
+                
+                log(`${this.getDisplayName()} 展开深渊诅咒领域，强化所有诅咒效果`);
+                return true;
+            }
+        };
+        
+        // 设置回合逻辑
+        c.turnImpl = function(field) {
+            // 黑暗能量回复
+            if (roll(this.mpBack)) {
+                const mpRestore = Math.floor(this.maxmp * 0.05);
+                this.mp = clamp(this.mp + mpRestore, 0, this.maxmp);
+            }
+            
+            // 对光明敌人额外伤害
+            const lightEnemies = field.filter(x => x.side !== this.side && (x.light > 0 || x.holy > 0));
+            if (lightEnemies.length > 0) {
+                this.buffs["光明克星"] = { st: 1, val: this.lightEnemyDmg };
+            }
+            
+            // 诅咒层数伤害加成
+            const totalCurses = field.filter(x => x.side !== this.side)
+                .reduce((sum, enemy) => sum + (enemy.debuffs["诅咒"]?.val || 0), 0);
+            if (totalCurses > 0) {
+                this.buffs["诅咒之力"] = { st: 1, val: totalCurses * this.curseStackDmg };
+            }
+        };
+    }
+};
+
+// === js/characters/bench.js ===
+// 板凳 角色实现
+DB["板凳"] = {
+    hp: 12000,
+    mp: 9500,
+    atk: 1500,
+    def: 1800,
+    spd: 280,
+    cr: 45,
+    cd: 240,
+    con: 650,
+    skills: [
+        { n: "喵影闪", c: 1, mp: 180, d: 0.8 * 1.8, e: "位移", s: 0 },
+        { n: "神速绊腿", c: 2, mp: 220, d: 0, e: "减速", s: 1 },
+        { n: "掠影分身", c: 3, mp: 280, d: 0, e: "分身", s: 0 },
+        { n: "腰包劫", c: 2, mp: 200, d: 0, e: "偷MP", s: 0 },
+        { n: "buff扒手", c: 3, mp: 250, d: 0, e: "偷BUFF", s: 0 },
+        { n: "技能扒窃", c: 4, mp: 300, d: 0, e: "偷CD", s: 0 },
+        { n: "喵盗・全域神速劫", c: 5, mp: 600, d: 0, e: "终极偷", s: 0 }
+    ],
+    passive(c) {
+        c.spd += 40;
+        c.steal = 1.8;
+        c.mpBack = 60;
+        c.dodge = 70;
+        c.immune.add("控制");
+        c.nightSpd = 40;
+        c.nightSteal = 30;
+        c.darkSteal = 40;
+        c.defStack = 10;
+        c.defStackMax = 8;
+        c.defStacks = 0;
+        c.lockHP = 1;
+        
+        // 设置技能实现
+        c.skillImpl = {
+            "喵影闪": function(s, target, field) {
+                const damage = Math.floor(this.atk * s.d * this.crit());
+                const actualDamage = target.processDamage(damage, this, s.n);
+                if (actualDamage > 0) {
+                    log(`${this.getDisplayName()} 使用喵影闪对 ${target.getDisplayName()} 造成 ${actualDamage} 伤害`);
+                }
+                this.buffs["灵巧"] = { st: 2, val: 30 }; // 闪避+30%
+                return true;
+            },
+            
+            "神速绊腿": function(s, target, field) {
+                target.debuffs["减速"] = { st: 3, val: 60 }; // 减速60%
+                target.debuffs["定身"] = { st: 1, val: 0 }; // 无法行动1回合
+                log(`${this.getDisplayName()} 使用神速绊腿，${target.getDisplayName()} 被减速并定身`);
+                return true;
+            },
+            
+            "掠影分身": function(s, target, field) {
+                this.buffs["分身"] = { st: 3, val: 0 };
+                this.buffs["闪避提升"] = { st: 3, val: 40 }; // 闪避+40%
+                log(`${this.getDisplayName()} 使用掠影分身，制造幻影并提升闪避`);
+                return true;
+            },
+            
+            "腰包劫": function(s, target, field) {
+                const stolenMP = Math.floor(target.mp * 0.2 * this.steal);
+                target.mp = clamp(target.mp - stolenMP, 0, target.maxmp);
+                this.mp = clamp(this.mp + stolenMP, 0, this.maxmp);
+                log(`${this.getDisplayName()} 使用腰包劫，从 ${target.getDisplayName()} 偷取 ${stolenMP} MP`);
+                return true;
+            },
+            
+            "buff扒手": function(s, target, field) {
+                const buffKeys = Object.keys(target.buffs);
+                if (buffKeys.length > 0) {
+                    const stolenBuff = buffKeys[rand(buffKeys.length)];
+                    this.buffs[stolenBuff] = target.buffs[stolenBuff];
+                    delete target.buffs[stolenBuff];
+                    log(`${this.getDisplayName()} 使用buff扒手，从 ${target.getDisplayName()} 偷取 ${stolenBuff} 效果`);
+                } else {
+                    log(`${this.getDisplayName()} 使用buff扒手，但 ${target.getDisplayName()} 没有可偷取的buff`);
+                }
+                return true;
+            },
+            
+            "技能扒窃": function(s, target, field) {
+                const skillKeys = Object.keys(target.cooldowns).filter(k => target.cooldowns[k] > 0);
+                if (skillKeys.length > 0) {
+                    const stolenSkill = skillKeys[rand(skillKeys.length)];
+                    target.cooldowns[stolenSkill] += 2; // 增加2回合冷却
+                    log(`${this.getDisplayName()} 使用技能扒窃，延长 ${target.getDisplayName()} 的 ${stolenSkill} 冷却2回合`);
+                } else {
+                    log(`${this.getDisplayName()} 使用技能扒窃，但 ${target.getDisplayName()} 没有在冷却的技能`);
+                }
+                return true;
+            },
+            
+            "喵盗・全域神速劫": function(s, target, field) {
+                const enemies = field.filter(x => x.side !== this.side && x.hp > 0);
+                
+                enemies.forEach(enemy => {
+                    // 偷MP
+                    const stolenMP = Math.floor(enemy.mp * 0.15 * this.steal);
+                    enemy.mp = clamp(enemy.mp - stolenMP, 0, enemy.maxmp);
+                    this.mp = clamp(this.mp + stolenMP, 0, this.maxmp);
+                    
+                    // 偷buff
+                    const buffKeys = Object.keys(enemy.buffs);
+                    if (buffKeys.length > 0) {
+                        const stolenBuff = buffKeys[rand(buffKeys.length)];
+                        this.buffs[stolenBuff] = enemy.buffs[stolenBuff];
+                        delete enemy.buffs[stolenBuff];
+                    }
+                    
+                    // 增加技能冷却
+                    const skillKeys = Object.keys(enemy.cooldowns).filter(k => enemy.cooldowns[k] > 0);
+                    if (skillKeys.length > 0) {
+                        const stolenSkill = skillKeys[rand(skillKeys.length)];
+                        enemy.cooldowns[stolenSkill] += 1;
+                    }
+                });
+                
+                this.buffs["神速"] = { st: 3, val: 50 }; // 速度+50%
+                log(`${this.getDisplayName()} 使用喵盗・全域神速劫，偷取所有敌人资源`);
+                return true;
+            }
+        };
+        
+        // 设置回合逻辑
+        c.turnImpl = function(field) {
+            // 高闪避几率
+            if (roll(this.dodge)) {
+                this.buffs["闪避"] = { st: 1, val: 0 };
+            }
+            
+            // MP回复
+            if (roll(this.mpBack)) {
+                const mpRestore = Math.floor(this.maxmp * 0.08);
+                this.mp = clamp(this.mp + mpRestore, 0, this.maxmp);
+            }
+            
+            // 防御叠加
+            if (this.defStacks < this.defStackMax) {
+                this.defStacks++;
+                this.def += this.defStack;
+            }
+            
+            // 夜晚/黑暗环境加成
+            const darkEnemies = field.filter(x => x.side !== this.side && x.dark > 0);
+            if (darkEnemies.length > 0) {
+                this.spd += this.nightSpd;
+                this.steal += this.nightSteal / 100;
+            }
+            
+            // 锁血保命
+            if (this.hp <= 0 && this.lockHP) {
+                this.hp = 1;
+                this.lockHP = 0;
+                this.buffs["猫有九命"] = { st: 2, val: 0 };
+                log(`${this.getDisplayName()} 触发猫有九命，锁血1点`);
+            }
+        };
+    }
+};
+
+// === js/characters/huangye.js ===
+// 黄叶 角色实现
+DB["黄叶"] = {
+    hp: 16000,
+    mp: 6500,
+    atk: 2000,
+    def: 1800,
+    spd: 150,
+    cr: 30,
+    cd: 210,
+    pure: 500,
+    skills: [
+        { n: "暗影突袭", c: 2, mp: 350, d: 1.51, e: "暗隐", s: 1 },
+        { n: "暗域蔓延", c: 3, mp: 450, d: 0.78, e: "暗蚀", s: 1 },
+        { n: "影刃斩", c: 4, mp: 500, d: 1.475, e: "多段", s: 1 },
+        { n: "圣辉普照", c: 2, mp: 300, d: -1.3, e: "圣辉", s: 0 },
+        { n: "圣罚之盾", c: 3, mp: 400, d: 0, e: "护盾", s: 0 },
+        { n: "圣魂救赎", c: 6, mp: 800, d: 0, e: "复活", s: 0 },
+        { n: "明暗裁决", c: 10, mp: 1500, d: 3, e: "混合", s: 2 }
+    ],
+    passive(c) {
+        c.dark = 40;
+        c.light = 40;
+        c.deathOnce = 1;
+        c.immune.add("控制");
+        c.darkPen = 50;
+        c.lightHeal = 50;
+        c.mpBackDark = 25;
+        c.mpBackLight = 35;
+        c.immune.add("黑暗禁锢");
+        c.immune.add("光明封印");
+        
+        // 设置技能实现
+        c.skillImpl = {
+            "暗影突袭": function(s, target, field) {
+                const damage = Math.floor(this.atk * s.d * this.crit());
+                const actualDamage = target.processDamage(damage, this, s.n);
+                if (actualDamage > 0) {
+                    log(`${this.getDisplayName()} 使用暗影突袭对 ${target.getDisplayName()} 造成 ${actualDamage} 伤害`);
+                }
+                this.buffs["暗影形态"] = { st: 2, val: 25 }; // 暗影伤害+25%
+                return true;
+            },
+            
+            "暗域蔓延": function(s, target, field) {
+                const enemies = field.filter(x => x.side !== this.side && x.hp > 0).slice(0, 3);
+                enemies.forEach(enemy => {
+                    const damage = Math.floor(this.atk * s.d * this.crit());
+                    const actualDamage = enemy.processDamage(damage, this, s.n);
+                    if (actualDamage > 0) {
+                        log(`${this.getDisplayName()} 使用暗域蔓延对 ${enemy.getDisplayName()} 造成 ${actualDamage} 伤害`);
+                    }
+                    enemy.debuffs["暗蚀"] = { st: 3, val: 20 }; // 受到暗影伤害+20%
+                });
+                return true;
+            },
+            
+            "影刃斩": function(s, target, field) {
+                // 三段攻击
+                let totalDamage = 0;
+                for (let i = 0; i < 3; i++) {
+                    const damage = Math.floor(this.atk * (s.d / 3) * this.crit());
+                    const actualDamage = target.processDamage(damage, this, s.n);
+                    totalDamage += actualDamage;
+                }
+                if (totalDamage > 0) {
+                    log(`${this.getDisplayName()} 使用影刃斩对 ${target.getDisplayName()} 造成 ${totalDamage} 伤害（三段）`);
+                }
+                return true;
+            },
+            
+            "圣辉普照": function(s, target, field) {
+                const heal = Math.floor(this.atk * -s.d * this.crit() * (1 + this.lightHeal / 100));
+                const allies = field.filter(x => x.side === this.side);
+                allies.forEach(ally => {
+                    ally.hp = clamp(ally.hp + heal, 0, ally.maxhp);
+                });
+                log(`${this.getDisplayName()} 使用圣辉普照，治疗全体友军 ${heal} HP`);
+                
+                // 光明MP回复
+                if (roll(this.mpBackLight)) {
+                    const mpRestore = Math.floor(s.mp * 0.5);
+                    this.mp = clamp(this.mp + mpRestore, 0, this.maxmp);
+                }
+                return true;
+            },
+            
+            "圣罚之盾": function(s, target, field) {
+                const shield = Math.floor(this.atk * 2.5);
+                target.buffs["圣罚之盾"] = { st: 3, val: shield };
+                log(`${this.getDisplayName()} 为 ${target.getDisplayName()} 施加圣罚之盾，提供 ${shield} 点护盾`);
+                return true;
+            },
+            
+            "圣魂救赎": function(s, target, field) {
+                const deadAllies = field.filter(x => x.side === this.side && x.hp <= 0);
+                if (deadAllies.length > 0) {
+                    const ally = deadAllies[0];
+                    ally.hp = Math.floor(ally.maxhp * 0.5);
+                    ally.mp = Math.floor(ally.maxmp * 0.3);
+                    ally.buffs["圣魂庇护"] = { st: 2, val: 0 };
+                    log(`${this.getDisplayName()} 使用圣魂救赎复活 ${ally.getDisplayName()}`);
+                } else {
+                    // 如果没有死亡的队友，则治疗全体
+                    const heal = Math.floor(this.atk * 1.5);
+                    const allies = field.filter(x => x.side === this.side && x.hp > 0);
+                    allies.forEach(ally => {
+                        ally.hp = clamp(ally.hp + heal, 0, ally.maxhp);
+                    });
+                    log(`${this.getDisplayName()} 使用圣魂救赎治疗全体友军 ${heal} HP`);
+                }
+                return true;
+            },
+            
+            "明暗裁决": function(s, target, field) {
+                const darkDamage = Math.floor(this.atk * 1.5 * this.crit() * (1 + this.dark / 100));
+                const lightDamage = Math.floor(this.atk * 1.5 * this.crit() * (1 + this.light / 100));
+                const totalDamage = darkDamage + lightDamage;
+                
+                const actualDamage = target.processDamage(totalDamage, this, s.n);
+                if (actualDamage > 0) {
+                    log(`${this.getDisplayName()} 使用明暗裁决对 ${target.getDisplayName()} 造成 ${actualDamage} 伤害`);
+                }
+                
+                // 附加效果
+                target.debuffs["黑暗印记"] = { st: 3, val: 30 }; // 受到暗影伤害+30%
+                target.debuffs["光明印记"] = { st: 3, val: 30 }; // 受到光明伤害+30%
+                
+                this.buffs["明暗平衡"] = { st: 3, val: 40 }; // 全伤害+40%
+                
+                log(`${this.getDisplayName()} 使用明暗裁决，平衡光暗之力`);
+                return true;
+            }
+        };
+        
+        // 设置回合逻辑
+        c.turnImpl = function(field) {
+            // 黑暗MP回复
+            const darkSkillsUsed = this.currentTurnSkills.filter(s => s.e.includes("暗")).length;
+            if (darkSkillsUsed > 0 && roll(this.mpBackDark)) {
+                const mpRestore = Math.floor(this.maxmp * 0.04);
+                this.mp = clamp(this.mp + mpRestore, 0, this.maxmp);
+            }
+            
+            // 光明MP回复
+            const lightSkillsUsed = this.currentTurnSkills.filter(s => s.e.includes("圣") || s.e.includes("光")).length;
+            if (lightSkillsUsed > 0 && roll(this.mpBackLight)) {
+                const mpRestore = Math.floor(this.maxmp * 0.06);
+                this.mp = clamp(this.mp + mpRestore, 0, this.maxmp);
+            }
+            
+            // 光暗平衡加成
+            const darkEnemies = field.filter(x => x.side !== this.side && x.dark > 0);
+            const lightEnemies = field.filter(x => x.side !== this.side && x.light > 0);
+            
+            if (darkEnemies.length > 0) {
+                this.buffs["光明克制"] = { st: 1, val: this.light };
+            }
+            if (lightEnemies.length > 0) {
+                this.buffs["黑暗克制"] = { st: 1, val: this.dark };
+            }
+            
+            // 免死机制
+            if (this.hp <= 0 && this.deathOnce) {
+                this.hp = Math.floor(this.maxhp * 0.3);
+                this.deathOnce = 0;
+                this.buffs["光暗重生"] = { st: 2, val: 0 };
+                log(`${this.getDisplayName()} 触发光暗重生，恢复30%HP`);
+            }
+        };
+    }
+};
+
+// === js/characters/xiaomo.js ===
+// 小莫 角色实现
+DB["小莫"] = {
+    hp: 15000,
+    mp: 9800,
+    atk: 2000,
+    def: 1200,
+    spd: 160,
+    cr: 40,
+    cd: 230,
+    ele: 350,
+    skills: [
+        // 通用技能
+        { n: "元素契约・唤灵", c: 3, mp: 220, d: 0, e: "召唤", s: 0 },
+        // 火形态技能
+        { n: "焚天炎爆", c: 3, mp: 380, d: 2.8 * 1.35, e: "灼烧", s: 1, form: "火" },
+        { n: "炎狱囚笼", c: 2, mp: 280, d: 2.2 * 1.35, e: "炎狱", s: 1, form: "火" },
+        { n: "炎核过载", c: 4, mp: 300, d: 2 * 1.35, e: "过载", s: 1, form: "火" },
+        // 冰形态技能
+        { n: "极霜暴雪", c: 3, mp: 350, d: 2.5 * 1.35, e: "冻结", s: 1, form: "冰" },
+        { n: "冰棱护盾", c: 2, mp: 250, d: 0, e: "冰棱盾", s: 0, form: "冰" },
+        { n: "冰域禁锢", c: 3, mp: 280, d: 2.2 * 1.35, e: "冰域", s: 1, form: "冰" },
+        // 雷形态技能
+        { n: "雷霆万钧", c: 4, mp: 400, d: 1.5 * 1.35 * 3, e: "麻痹", s: 1, form: "雷" },
+        { n: "雷暴突袭", c: 2, mp: 260, d: 2.4 * 1.35, e: "破防", s: 1, form: "雷" },
+        { n: "雷云破防", c: 4, mp: 350, d: 0.8 * 1.35, e: "雷云", s: 1, form: "雷" },
+        // 水形态技能
+        { n: "百川怒涛", c: 3, mp: 320, d: 2.8 * 1.35, e: "割裂", s: 1, form: "水" },
+        { n: "水幕绞杀", c: 3, mp: 280, d: 1 * 1.35, e: "水幕", s: 1, form: "水" },
+        { n: "深海冲击", c: 4, mp: 350, d: 5 * 1.35, e: "深海", s: 1, form: "水" },
+        // 终极技能
+        { n: "元素寂灭", c: 6, mp: 850, d: 0, e: "终", s: 0 }
+    ],
+    passive(c) {
+        c.dmg *= 1.35;
+        c.mpBack = 30;
+        c.lockHP = 1;
+        c.pen = 30; // 无视30%防御
+        c.waterCD = 280;
+        c.otherCD = 260; // 形态暴伤加成
+        c.mpBackWater = 30;
+        c.mpBackOther = 25;
+        c.healLow = 30;
+        c.healAmount = 2400; // HP<30%时回血
+        c.waterReduce = 25; // 水形态减伤
+        c.randomSkills = 3; // 每回合随机释放3个技能
+        c.ultimateLimit = 1; // 终极技能每回合最多1次
+        c.currentForm = "无"; // 当前形态
+        
+        // 设置技能实现
+        c.skillImpl = {
+            "元素契约・唤灵": function(s, target, field) {
+                const forms = ["火", "冰", "雷", "水"];
+                const newForm = forms[rand(forms.length)];
+                this.currentForm = newForm;
+                
+                // 根据形态获得不同加成
+                switch (newForm) {
+                    case "火":
+                        this.buffs["火焰形态"] = { st: 4, val: 25 }; // 火伤+25%
+                        break;
+                    case "冰":
+                        this.buffs["寒冰形态"] = { st: 4, val: 20 }; // 防御+20%
+                        break;
+                    case "雷":
+                        this.buffs["雷霆形态"] = { st: 4, val: 15 }; // 速度+15%
+                        break;
+                    case "水":
+                        this.buffs["流水形态"] = { st: 4, val: 30 }; // 治疗+30%
+                        break;
+                }
+                
+                log(`${this.getDisplayName()} 使用元素契约・唤灵，切换至 ${newForm} 形态`);
+                return true;
+            },
+            
+            "焚天炎爆": function(s, target, field) {
+                if (this.currentForm !== "火") return false;
+                
+                const damage = Math.floor(this.atk * s.d * this.crit());
+                const actualDamage = target.processDamage(damage, this, s.n);
+                if (actualDamage > 0) {
+                    log(`${this.getDisplayName()} 使用焚天炎爆对 ${target.getDisplayName()} 造成 ${actualDamage} 伤害`);
+                }
+                target.debuffs["灼烧"] = { st: 3, val: Math.floor(this.atk * 0.4) };
+                return true;
+            },
+            
+            "炎狱囚笼": function(s, target, field) {
+                if (this.currentForm !== "火") return false;
+                
+                const damage = Math.floor(this.atk * s.d * this.crit());
+                const actualDamage = target.processDamage(damage, this, s.n);
+                if (actualDamage > 0) {
+                    log(`${this.getDisplayName()} 使用炎狱囚笼对 ${target.getDisplayName()} 造成 ${actualDamage} 伤害`);
+                }
+                target.debuffs["炎狱"] = { st: 2, val: 0 }; // 无法行动1回合
+                log(`${this.getDisplayName()} 的炎狱囚笼困住了 ${target.getDisplayName()}`);
+                return true;
+            },
+            
+            "冰棱护盾": function(s, target, field) {
+                if (this.currentForm !== "冰") return false;
+                
+                const shield = Math.floor(this.atk * 2.5);
+                this.buffs["冰棱护盾"] = { st: 3, val: shield };
+                this.hasReflect = true;
+                this.reflectDamage = Math.floor(this.atk * 0.6);
+                log(`${this.getDisplayName()} 使用冰棱护盾，获得 ${shield} 点护盾和反伤效果`);
+                return true;
+            },
+            
+            "极霜暴雪": function(s, target, field) {
+                if (this.currentForm !== "冰") return false;
+                
+                const enemies = field.filter(x => x.side !== this.side && x.hp > 0).slice(0, 3);
+                enemies.forEach(enemy => {
+                    const damage = Math.floor(this.atk * s.d * this.crit());
+                    const actualDamage = enemy.processDamage(damage, this, s.n);
+                    if (actualDamage > 0) {
+                        log(`${this.getDisplayName()} 使用极霜暴雪对 ${enemy.getDisplayName()} 造成 ${actualDamage} 伤害`);
+                    }
+                    if (roll(30)) {
+                        enemy.debuffs["冻结"] = { st: 1, val: 0 }; // 冻结1回合
+                        log(`${enemy.getDisplayName()} 被冻结了`);
+                    }
+                });
+                return true;
+            },
+            
+            "雷霆万钧": function(s, target, field) {
+                if (this.currentForm !== "雷") return false;
+                
+                const enemies = field.filter(x => x.side !== this.side && x.hp > 0).slice(0, 3);
+                enemies.forEach(enemy => {
+                    const damage = Math.floor(this.atk * s.d * this.crit());
+                    const actualDamage = enemy.processDamage(damage, this, s.n);
+                    if (actualDamage > 0) {
+                        log(`${this.getDisplayName()} 使用雷霆万钧对 ${enemy.getDisplayName()} 造成 ${actualDamage} 伤害`);
+                    }
+                    enemy.debuffs["麻痹"] = { st: 2, val: 30 }; // 速度-30%
+                });
+                return true;
+            },
+            
+            "雷暴突袭": function(s, target, field) {
+                if (this.currentForm !== "雷") return false;
+                
+                const damage = Math.floor(this.atk * s.d * this.crit());
+                const actualDamage = target.processDamage(damage, this, s.n);
+                if (actualDamage > 0) {
+                    log(`${this.getDisplayName()} 使用雷暴突袭对 ${target.getDisplayName()} 造成 ${actualDamage} 伤害`);
+                }
+                target.debuffs["破防"] = { st: 2, val: 25 }; // 防御-25%
+                return true;
+            },
+            
+            "百川怒涛": function(s, target, field) {
+                if (this.currentForm !== "水") return false;
+                
+                const damage = Math.floor(this.atk * s.d * this.crit());
+                const actualDamage = target.processDamage(damage, this, s.n);
+                if (actualDamage > 0) {
+                    log(`${this.getDisplayName()} 使用百川怒涛对 ${target.getDisplayName()} 造成 ${actualDamage} 伤害`);
+                }
+                target.debuffs["割裂"] = { st: 3, val: Math.floor(this.atk * 0.35) };
+                
+                // 水形态治疗
+                const allies = field.filter(x => x.side === this.side && x.hp > 0);
+                const heal = Math.floor(this.atk * 0.8);
+                allies.forEach(ally => {
+                    ally.hp = clamp(ally.hp + heal, 0, ally.maxhp);
+                });
+                log(`${this.getDisplayName()} 的水形态同时治疗全体友军 ${heal} HP`);
+                return true;
+            },
+            
+            "水幕绞杀": function(s, target, field) {
+                if (this.currentForm !== "水") return false;
+                
+                const enemies = field.filter(x => x.side !== this.side && x.hp > 0).slice(0, 2);
+                enemies.forEach(enemy => {
+                    const damage = Math.floor(this.atk * s.d * this.crit());
+                    const actualDamage = enemy.processDamage(damage, this, s.n);
+                    if (actualDamage > 0) {
+                        log(`${this.getDisplayName()} 使用水幕绞杀对 ${enemy.getDisplayName()} 造成 ${actualDamage} 伤害`);
+                    }
+                    enemy.debuffs["水幕"] = { st: 2, val: 20 }; // 命中-20%
+                });
+                return true;
+            },
+            
+            "元素寂灭": function(s, target, field) {
+                const enemies = field.filter(x => x.side !== this.side && x.hp > 0);
+                let totalDamage = 0;
+                
+                enemies.forEach(enemy => {
+                    // 根据当前形态造成不同伤害
+                    let damageMultiplier = 1;
+                    switch (this.currentForm) {
+                        case "火": damageMultiplier = 1.4; break;
+                        case "冰": damageMultiplier = 1.3; break;
+                        case "雷": damageMultiplier = 1.5; break;
+                        case "水": damageMultiplier = 1.2; break;
+                    }
+                    
+                    const damage = Math.floor(this.atk * 3.5 * damageMultiplier * this.crit());
+                    const actualDamage = enemy.processDamage(damage, this, s.n);
+                    totalDamage += actualDamage;
+                });
+                
+                // 重置形态
+                this.currentForm = "无";
+                
+                log(`${this.getDisplayName()} 使用元素寂灭，造成总计 ${totalDamage} 伤害，元素形态重置`);
+                return true;
+            }
+        };
+        
+        // 设置回合逻辑
+        c.turnImpl = function(field) {
+            // 形态特定效果
+            switch (this.currentForm) {
+                case "火":
+                    // 火形态持续伤害
+                    const burningEnemies = field.filter(x => x.side !== this.side && x.debuffs["灼烧"]);
+                    burningEnemies.forEach(enemy => {
+                        const burnDamage = Math.floor(this.atk * 0.2);
+                        enemy.hp = clamp(enemy.hp - burnDamage, 0, enemy.maxhp);
+                        if (burnDamage > 0) {
+                            log(`${this.getDisplayName()} 的火形态持续灼烧 ${enemy.getDisplayName()} ${burnDamage} 伤害`);
+                        }
+                    });
+                    break;
+                case "水":
+                    // 水形态减伤
+                    this.buffs["水流护体"] = { st: 1, val: this.waterReduce };
+                    // 水形态MP回复
+                    if (roll(this.mpBackWater)) {
+                        const mpRestore = Math.floor(this.maxmp * 0.04);
+                        this.mp = clamp(this.mp + mpRestore, 0, this.maxmp);
+                    }
+                    break;
+                default:
+                    // 其他形态MP回复
+                    if (roll(this.mpBackOther)) {
+                        const mpRestore = Math.floor(this.maxmp * 0.03);
+                        this.mp = clamp(this.mp + mpRestore, 0, this.maxmp);
+                    }
+            }
+            
+            // 低血量治疗
+            if (this.hp < this.maxhp * this.healLow / 100) {
+                this.hp = clamp(this.hp + this.healAmount, 0, this.maxhp);
+                log(`${this.getDisplayName()} 触发元素治愈，恢复 ${this.healAmount} HP`);
+            }
+            
+            // 锁血保命
+            if (this.hp <= 0 && this.lockHP) {
+                this.hp = 1;
+                this.lockHP = 0;
+                this.buffs["元素护体"] = { st: 2, val: 0 };
+                log(`${this.getDisplayName()} 触发元素护体，锁血1点`);
+            }
+            
+            // 随机技能释放（特殊AI）
+            if (this.randomSkills > 0) {
+                const availableSkills = this.skills.filter(skill => 
+                    this.canUse(skill) && 
+                    (!skill.form || skill.form === this.currentForm) &&
+                    skill.n !== "元素寂灭"
+                );
+                
+                const skillsToUse = [];
+                for (let i = 0; i < Math.min(this.randomSkills, availableSkills.length); i++) {
+                    const randomSkill = availableSkills[rand(availableSkills.length)];
+                    if (!skillsToUse.includes(randomSkill)) {
+                        skillsToUse.push(randomSkill);
+                    }
+                }
+                
+                if (skillsToUse.length > 0) {
+                    const enemies = field.filter(x => x.side !== this.side && x.hp > 0);
+                    if (enemies.length > 0) {
+                        const target = enemies[rand(enemies.length)];
+                        log(`<div class="special-turn">${this.getDisplayName()} 元素涌动，一回合释放多个技能: ${skillsToUse.map(s => s.n).join(", ")}</div>`);
+                        
+                        skillsToUse.forEach(skill => {
+                            this.useSkill(skill, target, field);
+                        });
+                    }
+                }
+            }
+        };
+    }
+};
+
+// === js/characters/dongji.js ===
+// 冬季风暴 角色实现
+DB["冬季风暴"] = {
+    hp: 18500,
+    mp: 7200,
+    atk: 1700,
+    def: 1400,
+    spd: 145,
+    cr: 45,
+    cd: 200,
+    frost: 400,
+    skills: [
+        { n: "霜之哀伤・轻斩", c: 1, mp: 150, d: 2.4 * 1.4, e: "单体冰伤", s: 1 },
+        { n: "冰封斩击", c: 2, mp: 240, d: 1.8 * 1.4, e: "范围冰伤", s: 1 },
+        { n: "极冰护盾", c: 2, mp: 220, d: 0, e: "自保反伤", s: 0 },
+        { n: "霜之哀伤・领域斩", c: 3, mp: 360, d: 2.8 * 1.4, e: "范围爆发", s: 1 },
+        { n: "冰封领域・禁锢", c: 3, mp: 320, d: 1.2 * 1.4, e: "范围控制", s: 1 },
+        { n: "霜域裁决・万物冰封", c: 7, mp: 850, d: 4 * 1.4, e: "终极爆发", s: 1 }
+    ],
+    passive(c) {
+        c.frostAffinity = 40; // 冰霜亲和40%
+        c.frostDomainActive = false;
+        c.frostDomainTurns = 0;
+        c.frostMarks = 0; // 冰霜印记
+        c.maxFrostMarks = 3;
+        c.lockHP = 1; // 锁血保命
+        c.deathOnce = 1;
+        c.frostShieldValue = 0;
+        
+        // 设置技能实现
+        c.skillImpl = {
+            "霜之哀伤・轻斩": function(s, target, field) {
+                const damage = Math.floor(this.atk * s.d * this.crit());
+                const actualDamage = target.processDamage(damage, this, s.n);
+                if (actualDamage > 0) {
+                    log(`<div class="frost-domain">${this.getDisplayName()} 使用霜之哀伤・轻斩对 ${target.getDisplayName()} 造成 ${actualDamage} 伤害</div>`);
+                }
+                // 附加冰霜印记
+                if (!target.debuffs["冰霜印记"]) {
+                    target.debuffs["冰霜印记"] = { st: 3, val: 0 };
+                }
+                target.debuffs["冰霜印记"].val = Math.min(target.debuffs["冰霜印记"].val + 1, this.maxFrostMarks);
+                log(`<div class="frost-domain">${target.getDisplayName()} 获得 ${target.debuffs["冰霜印记"].val} 层冰霜印记</div>`);
+                return true;
+            },
+            
+            "冰封斩击": function(s, target, field) {
+                const enemies = field.filter(x => x.side !== this.side && x.hp > 0).slice(0, 4);
+                enemies.forEach(enemy => {
+                    const damage = Math.floor(this.atk * s.d * this.crit());
+                    const actualDamage = enemy.processDamage(damage, this, s.n);
+                    if (actualDamage > 0) {
+                        log(`<div class="frost-domain">${this.getDisplayName()} 使用冰封斩击对 ${enemy.getDisplayName()} 造成 ${actualDamage} 伤害</div>`);
+                    }
+                    // 附加冰霜印记和减速
+                    if (!enemy.debuffs["冰霜印记"]) {
+                        enemy.debuffs["冰霜印记"] = { st: 3, val: 0 };
+                    }
+                    enemy.debuffs["冰霜印记"].val = Math.min(enemy.debuffs["冰霜印记"].val + 1, this.maxFrostMarks);
+                    enemy.debuffs["减速"] = { st: 2, val: 50 }; // 减速50%
+                });
+                return true;
+            },
+            
+            "极冰护盾": function(s, target, field) {
+                const shield = Math.floor(this.atk * 2 * 1.4);
+                this.buffs["极冰护盾"] = { st: 2, val: shield };
+                this.hasReflect = true;
+                this.reflectDamage = Math.floor(this.atk * 0.7 * 1.4);
+                this.buffs["霜甲"] = { st: 1, val: 20 }; // 防御+20%
+                log(`<div class="frost-domain">${this.getDisplayName()} 使用极冰护盾，获得 ${shield} 点护盾和反伤效果</div>`);
+                return true;
+            },
+            
+            "霜之哀伤・领域斩": function(s, target, field) {
+                const enemies = field.filter(x => x.side !== this.side && x.hp > 0);
+                let totalDamage = 0;
+                
+                enemies.forEach(enemy => {
+                    // 根据冰霜印记层数增加伤害
+                    const frostStacks = enemy.debuffs["冰霜印记"]?.val || 0;
+                    const damageBonus = 1 + (frostStacks * 0.15);
+                    const damage = Math.floor(this.atk * s.d * this.crit() * damageBonus);
+                    const actualDamage = enemy.processDamage(damage, this, s.n);
+                    totalDamage += actualDamage;
+                    
+                    // 冻结高印记目标
+                    if (frostStacks >= 2 && roll(40)) {
+                        enemy.debuffs["冻结"] = { st: 1, val: 0 };
+                        log(`<div class="frost-domain">${enemy.getDisplayName()} 被冻结了！</div>`);
+                    }
+                });
+                
+                log(`<div class="frost-domain">${this.getDisplayName()} 使用霜之哀伤・领域斩，造成总计 ${totalDamage} 伤害</div>`);
+                return true;
+            },
+            
+            "冰封领域・禁锢": function(s, target, field) {
+                const enemies = field.filter(x => x.side !== this.side && x.hp > 0);
+                
+                enemies.forEach(enemy => {
+                    const damage = Math.floor(this.atk * s.d * this.crit());
+                    const actualDamage = enemy.processDamage(damage, this, s.n);
+                    if (actualDamage > 0) {
+                        log(`<div class="frost-domain">${this.getDisplayName()} 使用冰封领域・禁锢对 ${enemy.getDisplayName()} 造成 ${actualDamage} 伤害</div>`);
+                    }
+                    enemy.debuffs["禁锢"] = { st: 2, val: 0 }; // 无法行动2回合
+                    enemy.debuffs["冰霜印记"] = { st: 3, val: this.maxFrostMarks }; // 叠满印记
+                });
+                
+                this.buffs["冰封领域"] = { st: 3, val: 25 }; // 冰霜伤害+25%
+                log(`<div class="frost-domain">${this.getDisplayName()} 使用冰封领域・禁锢，禁锢所有敌人并叠满冰霜印记</div>`);
+                return true;
+            },
+            
+            "霜域裁决・万物冰封": function(s, target, field) {
+                this.frostDomainActive = true;
+                this.frostDomainTurns = 5;
+                const enemies = field.filter(x => x.side !== this.side && x.hp > 0);
+                
+                enemies.forEach(enemy => {
+                    const damage = Math.floor(this.atk * s.d * this.crit());
+                    const actualDamage = enemy.processDamage(damage, this, s.n);
+                    if (actualDamage > 0) {
+                        log(`<div class="frost-domain">${this.getDisplayName()} 使用霜域裁决・万物冰封对 ${enemy.getDisplayName()} 造成 ${actualDamage} 伤害</div>`);
+                    }
+                    enemy.debuffs["冰霜印记"] = { st: 3, val: 3 }; // 直接叠满3层
+                    if (roll(70)) {
+                        enemy.debuffs["冻结"] = { st: 2, val: 0 }; // 高概率冻结
+                        log(`<div class="frost-domain">${enemy.getDisplayName()} 被完全冻结！</div>`);
+                    }
+                });
+                
+                this.buffs["霜之无敌"] = { st: 1, val: 0 }; // 免疫伤害+控制1回合
+                this.isInvincible = true;
+                
+                const allies = field.filter(x => x.side === this.side);
+                const teamShield = Math.floor(this.atk * 3 * 1.4);
+                allies.forEach(ally => {
+                    ally.buffs["极冰庇护盾"] = { st: 2, val: teamShield };
+                });
+                
+                log(`<div class="frost-domain">${this.getDisplayName()} 使用霜域裁决・万物冰封，刷新冰霜领域，全队获得 ${teamShield} 点护盾</div>`);
+                return true;
+            }
+        };
+        
+        // 设置回合逻辑
+        c.turnImpl = function(field) {
+            // 冰霜领域效果
+            if (this.frostDomainActive) {
+                this.frostDomainTurns--;
+                this.mp -= 280;
+                
+                if (this.mp < 280 || this.frostDomainTurns <= 0) {
+                    this.frostDomainActive = false;
+                    log(`<div class="frost-domain">${this.getDisplayName()} 的冰霜领域消散了</div>`);
+                } else {
+                    const enemies = field.filter(x => x.side !== this.side && x.hp > 0);
+                    const domainDamage = Math.floor(this.atk * 0.6 * 1.4);
+                    enemies.forEach(enemy => {
+                        enemy.hp = clamp(enemy.hp - domainDamage, 0, enemy.maxhp);
+                    });
+                    log(`<div class="frost-domain">${this.getDisplayName()} 冰霜领域造成 ${domainDamage} 伤害</div>`);
+                }
+            }
+            
+            // 冰霜印记额外效果
+            const enemiesWithFrost = field.filter(x => x.side !== this.side && x.debuffs["冰霜印记"]);
+            enemiesWithFrost.forEach(enemy => {
+                const stacks = enemy.debuffs["冰霜印记"].val;
+                if (stacks >= 2) {
+                    // 减速效果
+                    if (!enemy.debuffs["冰霜减速"]) {
+                        enemy.debuffs["冰霜减速"] = { st: 1, val: stacks * 15 }; // 每层减速15%
+                    }
+                    
+                    // 持续伤害
+                    if (stacks >= 3) {
+                        const frostDamage = Math.floor(this.atk * 0.3 * stacks);
+                        enemy.hp = clamp(enemy.hp - frostDamage, 0, enemy.maxhp);
+                        log(`<div class="frost-domain">${enemy.getDisplayName()} 的冰霜印记造成 ${frostDamage} 持续伤害</div>`);
+                    }
+                }
+            });
+            
+            // 锁血保命
+            if (this.hp <= 0 && this.lockHP && this.deathOnce) {
+                this.hp = 1;
+                this.deathOnce = 0;
+                this.frostShieldValue = Math.floor(this.atk * 2.5 * 1.4);
+                this.buffs["极冰护盾"] = { st: 2, val: this.frostShieldValue };
+                this.buffs["冰霜复苏"] = { st: 2, val: 30 }; // 冰霜伤害+30%
+                log(`<div class="frost-domain">${this.getDisplayName()} 触发锁血保命，获得 ${this.frostShieldValue} 点护盾</div>`);
+            }
+        };
+        
+        log(`<div class="frost-domain">${c.getDisplayName()} 霜域裁决者激活，冰霜亲和: ${c.frostAffinity}%</div>`);
+    }
+};
+
+// === js/characters/yunli.js ===
+// 云璃 角色实现
+DB["云璃"] = {
+    hp: 13500,
+    mp: 7100,
+    atk: 1600,
+    def: 1200,
+    spd: 155,
+    cr: 42,
+    cd: 200,
+    sacred: 480,
+    skills: [
+        { n: "光脚・共鸣积累", c: 1, mp: 140, d: 0, e: "能量提升", s: 0 },
+        { n: "冈格尼尔・精准投", c: 2, mp: 310, d: 1.9 * 1.48, e: "单体爆发", s: 1 },
+        { n: "冈格尼尔・群体穿", c: 3, mp: 370, d: 1.6 * 1.48, e: "范围穿透", s: 1 },
+        { n: "光脚・地面控场", c: 2, mp: 250, d: 0, e: "群体控制", s: 1 },
+        { n: "馆主・神圣领域", c: 3, mp: 330, d: 0, e: "范围增益", s: 0 },
+        { n: "冈格尼尔・护盾", c: 2, mp: 230, d: 0, e: "自保反伤", s: 0 },
+        { n: "神圣・冈格尼尔终", c: 0, mp: 780, d: 7.5 * 1.48, e: "终极穿透", s: 1 }
+    ],
+    passive(c) {
+        c.sacredResonance = 0; // 神圣共鸣度
+        c.maxSacredResonance = 300;
+        c.resonanceForm = "触地"; // 形态：触地/共鸣/圣化
+        c.penetrationStacks = 0; // 穿透印记层数
+        c.maxPenetrationStacks = 3;
+        c.lockHP = 1; // 馆主保命
+        c.deathOnce = 1;
+        c.chargeTurns = 0; // 蓄力回合
+        
+        // 设置技能实现
+        c.skillImpl = {
+            "光脚・共鸣积累": function(s, target, field) {
+                this.sacredResonance = Math.min(this.sacredResonance + 100, this.maxSacredResonance);
+                this.buffs["共鸣增益"] = { st: 1, val: 48 }; // 下次投掷伤害+48%
+                log(`<div class="sacred-throw">${this.getDisplayName()} 使用光脚・共鸣积累，共鸣度增加100，下次投掷伤害+48%</div>`);
+                return true;
+            },
+            
+            "冈格尼尔・精准投": function(s, target, field) {
+                // 检查共鸣增益
+                const resonanceBonus = this.buffs["共鸣增益"] ? this.buffs["共鸣增益"].val / 100 : 1;
+                const damage = Math.floor(this.atk * s.d * this.crit() * resonanceBonus);
+                const actualDamage = target.processDamage(damage, this, s.n);
+                if (actualDamage > 0) {
+                    log(`<div class="sacred-throw">${this.getDisplayName()} 使用冈格尼尔・精准投对 ${target.getDisplayName()} 造成 ${actualDamage} 伤害</div>`);
+                }
+                
+                // 移除共鸣增益
+                delete this.buffs["共鸣增益"];
+                
+                // 增加穿透印记
+                if (!target.debuffs["神圣穿透印记"]) {
+                    target.debuffs["神圣穿透印记"] = { st: 2, val: 0 };
+                }
+                target.debuffs["神圣穿透印记"].val = Math.min(target.debuffs["神圣穿透印记"].val + 2, this.maxPenetrationStacks);
+                log(`<div class="sacred-throw">${target.getDisplayName()} 获得 ${target.debuffs["神圣穿透印记"].val} 层神圣穿透印记</div>`);
+                
+                return true;
+            },
+            
+            "冈格尼尔・群体穿": function(s, target, field) {
+                const enemies = field.filter(x => x.side !== this.side && x.hp > 0).slice(0, 3);
+                enemies.forEach(enemy => {
+                    const damage = Math.floor(this.atk * s.d * this.crit());
+                    const actualDamage = enemy.processDamage(damage, this, s.n);
+                    if (actualDamage > 0) {
+                        log(`<div class="sacred-throw">${this.getDisplayName()} 使用冈格尼尔・群体穿对 ${enemy.getDisplayName()} 造成 ${actualDamage} 伤害</div>`);
+                    }
+                    
+                    // 增加穿透印记
+                    if (!enemy.debuffs["神圣穿透印记"]) {
+                        enemy.debuffs["神圣穿透印记"] = { st: 2, val: 0 };
+                    }
+                    enemy.debuffs["神圣穿透印记"].val = Math.min(enemy.debuffs["神圣穿透印记"].val + 1, this.maxPenetrationStacks);
+                });
+                return true;
+            },
+            
+            "光脚・地面控场": function(s, target, field) {
+                const enemies = field.filter(x => x.side !== this.side && x.hp > 0);
+                enemies.forEach(enemy => {
+                    enemy.debuffs["地面束缚"] = { st: 2, val: 30 }; // 速度-30%
+                    if (roll(40)) {
+                        enemy.debuffs["定身"] = { st: 1, val: 0 }; // 40%概率定身
+                    }
+                });
+                
+                this.buffs["地面掌控"] = { st: 2, val: 20 }; // 自身速度+20%
+                log(`<div class="sacred-throw">${this.getDisplayName()} 使用光脚・地面控场，束缚所有敌人</div>`);
+                return true;
+            },
+            
+            "馆主・神圣领域": function(s, target, field) {
+                const allies = field.filter(x => x.side === this.side);
+                allies.forEach(ally => {
+                    ally.buffs["神圣领域"] = { st: 3, val: 15 }; // 全属性+15%
+                    ally.buffs["神圣庇护"] = { st: 3, val: Math.floor(this.atk * 1.5) }; // 护盾
+                });
+                
+                this.sacredResonance = Math.min(this.sacredResonance + 50, this.maxSacredResonance);
+                log(`<div class="sacred-throw">${this.getDisplayName()} 展开馆主・神圣领域，全队获得增益，共鸣度增加50</div>`);
+                return true;
+            },
+            
+            "冈格尼尔・护盾": function(s, target, field) {
+                const shield = Math.floor(this.atk * 2.2);
+                this.buffs["冈格尼尔护盾"] = { st: 3, val: shield };
+                this.hasReflect = true;
+                this.reflectDamage = Math.floor(this.atk * 0.5);
+                log(`<div class="sacred-throw">${this.getDisplayName()} 使用冈格尼尔・护盾，获得 ${shield} 点护盾和反伤效果</div>`);
+                return true;
+            },
+            
+            "神圣・冈格尼尔终": function(s, target, field) {
+                const enemies = field.filter(x => x.side !== this.side && x.hp > 0);
+                let totalDamage = 0;
+                
+                // 前6次穿透轰击
+                for (let i = 0; i < 6; i++) {
+                    enemies.forEach(enemy => {
+                        // 根据穿透印记增加伤害
+                        const penetrationStacks = enemy.debuffs["神圣穿透印记"]?.val || 0;
+                        const penetrationBonus = 1 + (penetrationStacks * 0.25);
+                        const damage = Math.floor(this.atk * 1.5 * 1.48 * 1.75 * this.crit() * penetrationBonus);
+                        const actualDamage = enemy.processDamage(damage, this, s.n);
+                        totalDamage += actualDamage;
+                    });
+                }
+                
+                // 第7次裁决一击
+                enemies.forEach(enemy => {
+                    const damage = Math.floor(this.atk * 2.5 + this.sacred * 13);
+                    const actualDamage = enemy.processDamage(damage, this, s.n);
+                    totalDamage += actualDamage;
+                    
+                    // 即死判定
+                    if (enemy.debuffs["神圣贯穿"] && roll(38)) {
+                        const oldHP = enemy.hp;
+                        enemy.hp = 0;
+                        log(`<div class="sacred-throw">${this.getDisplayName()} 触发即死判定，${enemy.getDisplayName()} 被秒杀（${oldHP} HP）</div>`);
+                    }
+                });
+                
+                this.sacredResonance += 150;
+                // 清除所有穿透印记
+                enemies.forEach(enemy => {
+                    delete enemy.debuffs["神圣穿透印记"];
+                });
+                
+                log(`<div class="sacred-throw">${this.getDisplayName()} 使用神圣・冈格尼尔终，造成总计 ${totalDamage} 伤害，共鸣度增加150</div>`);
+                return true;
+            }
+        };
+        
+        // 设置回合逻辑
+        c.turnImpl = function(field) {
+            // 形态切换
+            if (this.sacredResonance >= 301 && this.resonanceForm !== "圣化") {
+                this.resonanceForm = "圣化";
+                this.buffs["圣化形态"] = { st: 3, val: 75 }; // 伤害+75%，暴击率75%
+                this.cr = 75;
+                log(`<div class="sacred-throw">${this.getDisplayName()} 进入圣化形态</div>`);
+            } else if (this.sacredResonance >= 131 && this.sacredResonance <= 300 && this.resonanceForm !== "共鸣") {
+                this.resonanceForm = "共鸣";
+                this.buffs["共鸣形态"] = { st: 4, val: 38 }; // 伤害+38%，暴击率+20%
+                this.cr = Math.min(this.cr + 20, 100);
+                log(`<div class="sacred-throw">${this.getDisplayName()} 进入共鸣形态</div>`);
+            }
+            
+            // 每回合生成共鸣值
+            if (this.resonanceForm === "触地") {
+                this.sacredResonance = Math.min(this.sacredResonance + 70, 300);
+            } else if (this.resonanceForm === "共鸣") {
+                this.sacredResonance = Math.min(this.sacredResonance + 40, 300);
+            }
+            
+            // 神圣共鸣效果
+            if (this.sacredResonance > 0) {
+                const resonanceEffect = Math.floor(this.sacredResonance / 100);
+                this.buffs["神圣共鸣"] = { st: 1, val: resonanceEffect * 10 }; // 每100共鸣度提供10%全属性加成
+            }
+            
+            // 馆主保命
+            if (this.hp <= 0 && this.lockHP && this.deathOnce) {
+                this.hp = 2430;
+                this.deathOnce = 0;
+                this.sacredResonance = Math.min(this.sacredResonance + 85, 300);
+                this.buffs["圣矛守护"] = { st: 2, val: 0 };
+                this.buffs["冈格尼尔护盾"] = { st: 2, val: Math.floor(this.atk * 3.5) };
+                log(`<div class="sacred-throw">${this.getDisplayName()} 触发馆主保命，锁血2430点</div>`);
+            }
+        };
+        
+        log(`<div class="sacred-throw">${c.getDisplayName()} 神圣投掷者激活，神圣共鸣度: ${c.sacredResonance}</div>`);
+    }
+};
+
+// === js/characters/setsuna.js ===
+// Setsuna 角色实现
+DB["Setsuna"] = {
+    hp: 10000,
+    mp: 8000,
+    atk: 2500,
+    def: 1200,
+    spd: 200,
+    cr: 75,
+    cd: 200,
+    dual: 400,
+    skills: [
+        { n: "精准瞬狙", c: 2, mp: 320, d: 1.5 * 1.4, e: "远程破防", s: 1 },
+        { n: "破甲狙击", c: 3, mp: 380, d: 1.2 * 1.4, e: "单体破防", s: 1 },
+        { n: "散射狙击", c: 4, mp: 450, d: 0.8 * 1.4, e: "群体伤害", s: 1 },
+        { n: "残月突刺", c: 2, mp: 280, d: 1.4 * 1.4, e: "近战收割", s: 1 },
+        { n: "影刃连斩", c: 3, mp: 350, d: 0.7 * 1.4 * 3, e: "多段伤害", s: 1 },
+        { n: "瞬步斩", c: 2, mp: 300, d: 1.1 * 1.4, e: "位移伤害", s: 1 },
+        { n: "双武・无影瞬杀", c: 8, mp: 1000, d: 3 * 1.4, e: "终极瞬杀", s: 1 }
+    ],
+    passive(c) {
+        c.weaponForm = "狙击"; // 形态：狙击/剑术
+        c.hidden = false; // 隐匿状态
+        c.hiddenTurns = 0;
+        c.dualWeaponMastery = 40; // 双武精通40%
+        c.bleedDamage = 1250; // 流血伤害
+        c.lockHP = 1; // 免死机制
+        c.deathOnce = 1;
+        c.sniperCritBonus = 15; // 狙击形态暴击加成
+        c.swordAtkBonus = 20; // 剑术形态攻击加成
+        
+        // 设置技能实现
+        c.skillImpl = {
+            "精准瞬狙": function(s, target, field) {
+                let damageMultiplier = 1;
+                if (this.hidden) {
+                    damageMultiplier = 1.5;
+                    this.hidden = false; // 隐匿状态解除
+                }
+                
+                const damage = Math.floor(this.atk * s.d * this.crit() * damageMultiplier);
+                const actualDamage = target.processDamage(damage, this, s.n);
+                if (actualDamage > 0) {
+                    log(`<div class="assassin">${this.getDisplayName()} 使用精准瞬狙对 ${target.getDisplayName()} 造成 ${actualDamage} 伤害</div>`);
+                }
+                
+                // 爆头真实伤害
+                if (roll(this.cr)) {
+                    const trueDamage = Math.floor(target.maxhp * 0.15);
+                    target.hp = clamp(target.hp - trueDamage, 0, target.maxhp);
+                    log(`<div class="assassin">${this.getDisplayName()} 触发爆头，造成 ${trueDamage} 真实伤害</div>`);
+                }
+                
+                // 破甲效果
+                target.debuffs["破甲"] = { st: 2, val: 20 }; // 防御-20%
+                return true;
+            },
+            
+            "破甲狙击": function(s, target, field) {
+                const damage = Math.floor(this.atk * s.d * this.crit());
+                const actualDamage = target.processDamage(damage, this, s.n);
+                if (actualDamage > 0) {
+                    log(`<div class="assassin">${this.getDisplayName()} 使用破甲狙击对 ${target.getDisplayName()} 造成 ${actualDamage} 伤害</div>`);
+                }
+                
+                // 强力破甲
+                target.debuffs["强力破甲"] = { st: 3, val: 40 }; // 防御-40%
+                target.debuffs["流血"] = { st: 3, val: this.bleedDamage }; // 附加流血
+                
+                log(`<div class="assassin">${target.getDisplayName()} 防御力大幅降低并开始流血</div>`);
+                return true;
+            },
+            
+            "散射狙击": function(s, target, field) {
+                const enemies = field.filter(x => x.side !== this.side && x.hp > 0).slice(0, 4);
+                enemies.forEach(enemy => {
+                    const damage = Math.floor(this.atk * s.d * this.crit());
+                    const actualDamage = enemy.processDamage(damage, this, s.n);
+                    if (actualDamage > 0) {
+                        log(`<div class="assassin">${this.getDisplayName()} 使用散射狙击对 ${enemy.getDisplayName()} 造成 ${actualDamage} 伤害</div>`);
+                    }
+                });
+                return true;
+            },
+            
+            "残月突刺": function(s, target, field) {
+                // 切换到剑术形态
+                this.weaponForm = "剑术";
+                this.buffs["剑术形态"] = { st: 3, val: this.swordAtkBonus };
+                
+                const damage = Math.floor(this.atk * s.d * this.crit() * (1 + this.swordAtkBonus / 100));
+                const actualDamage = target.processDamage(damage, this, s.n);
+                if (actualDamage > 0) {
+                    log(`<div class="assassin">${this.getDisplayName()} 使用残月突刺对 ${target.getDisplayName()} 造成 ${actualDamage} 伤害</div>`);
+                }
+                
+                // 低血量斩杀效果
+                if (target.hp < target.maxhp * 0.3) {
+                    const executeDamage = Math.floor(target.hp * 0.5);
+                    target.hp = clamp(target.hp - executeDamage, 0, target.maxhp);
+                    log(`<div class="assassin">${this.getDisplayName()} 触发残月斩杀，额外造成 ${executeDamage} 伤害</div>`);
+                }
+                
+                return true;
+            },
+            
+            "影刃连斩": function(s, target, field) {
+                // 三段攻击
+                let totalDamage = 0;
+                for (let i = 0; i < 3; i++) {
+                    const damage = Math.floor(this.atk * (s.d / 3) * this.crit() * (1 + this.swordAtkBonus / 100));
+                    const actualDamage = target.processDamage(damage, this, s.n);
+                    totalDamage += actualDamage;
+                    
+                    // 每次攻击有概率附加流血
+                    if (roll(30)) {
+                        target.debuffs["流血"] = { st: 2, val: Math.floor(this.bleedDamage * 0.7) };
+                    }
+                }
+                
+                if (totalDamage > 0) {
+                    log(`<div class="assassin">${this.getDisplayName()} 使用影刃连斩对 ${target.getDisplayName()} 造成 ${totalDamage} 伤害（三段）</div>`);
+                }
+                
+                // 连击后进入隐匿
+                this.hidden = true;
+                this.hiddenTurns = 1;
+                log(`<div class="assassin">${this.getDisplayName()} 完成连击后进入隐匿状态</div>`);
+                return true;
+            },
+            
+            "瞬步斩": function(s, target, field) {
+                const damage = Math.floor(this.atk * s.d * this.crit() * (1 + this.swordAtkBonus / 100));
+                const actualDamage = target.processDamage(damage, this, s.n);
+                if (actualDamage > 0) {
+                    log(`<div class="assassin">${this.getDisplayName()} 使用瞬步斩对 ${target.getDisplayName()} 造成 ${actualDamage} 伤害</div>`);
+                }
+                
+                // 位移效果 - 清除自身debuff
+                Object.keys(this.debuffs).forEach(key => {
+                    if (key !== "瞬步斩") {
+                        delete this.debuffs[key];
+                    }
+                });
+                
+                this.buffs["瞬步"] = { st: 1, val: 50 }; // 速度+50%
+                log(`<div class="assassin">${this.getDisplayName()} 使用瞬步斩，清除负面状态并提升速度</div>`);
+                return true;
+            },
+            
+            "双武・无影瞬杀": function(s, target, field) {
+                let totalDamage = 0;
+                
+                // 狙击阶段
+                this.weaponForm = "狙击";
+                const sniperDamage = Math.floor(this.atk * 3 * 1.4 * this.crit());
+                const actualSniperDamage = target.processDamage(sniperDamage, this, s.n);
+                totalDamage += actualSniperDamage;
+                target.debuffs["爆头标记"] = { st: 2, val: 40 }; // 防御-40%
+                
+                // 剑术阶段
+                this.weaponForm = "剑术";
+                let swordDamage = Math.floor(this.atk * 2.5 * 1.4 * this.crit() * (1 + this.swordAtkBonus / 100));
+                if (target.hp < target.maxhp * 0.3) swordDamage *= 2;
+                const actualSwordDamage = target.processDamage(swordDamage, this, s.n);
+                totalDamage += actualSwordDamage;
+                
+                // 恢复和隐匿
+                this.hidden = true;
+                this.hiddenTurns = 2;
+                this.hp = clamp(this.hp + this.maxhp * 0.3, 0, this.maxhp);
+                this.mp = clamp(this.mp + this.maxmp * 0.3, 0, this.maxmp);
+                
+                // 刷新非终极技能冷却
+                Object.keys(this.cooldowns).forEach(skill => {
+                    if (skill !== "双武・无影瞬杀") this.cooldowns[skill] = 0;
+                });
+                
+                log(`<div class="assassin">${this.getDisplayName()} 使用双武・无影瞬杀，造成 ${totalDamage} 伤害，重新进入隐匿状态</div>`);
+                return true;
+            }
+        };
+        
+        // 设置回合逻辑
+        c.turnImpl = function(field) {
+            // 隐匿状态
+            if (this.hidden) {
+                this.hiddenTurns--;
+                if (this.hiddenTurns <= 0) {
+                    this.hidden = false;
+                    log(`<div class="assassin">${this.getDisplayName()} 脱离隐匿状态</div>`);
+                } else {
+                    // 隐匿状态下获得闪避
+                    this.buffs["隐匿"] = { st: 1, val: 60 }; // 60%闪避
+                }
+            }
+            
+            // 双武切换增益
+            if (this.weaponForm === "狙击") {
+                this.cr = Math.min(this.cr + this.sniperCritBonus, 90);
+                this.buffs["狙击专注"] = { st: 1, val: 25 }; // 远程伤害+25%
+            } else {
+                this.atk = Math.floor(this.atk * (1 + this.swordAtkBonus / 100));
+                this.buffs["剑术精通"] = { st: 1, val: 20 }; // 近战伤害+20%
+            }
+            
+            // 双武精通效果
+            this.buffs["双武精通"] = { st: 1, val: this.dualWeaponMastery };
+            
+            // 免死机制
+            if (this.hp <= 0 && this.lockHP && this.deathOnce) {
+                this.hp = 1;
+                this.deathOnce = 0;
+                this.hidden = true;
+                this.hiddenTurns = 2;
+                log(`<div class="assassin">${this.getDisplayName()} 触发免死机制，锁血1点并进入隐匿</div>`);
+            }
+        };
+        
+        log(`<div class="assassin">${c.getDisplayName()} 双武杀手激活，双武精通: ${c.dualWeaponMastery}%</div>`);
+    }
+};
+
+// === js/characters/robin.js ===
+// 知更鸟 角色实现
+DB["知更鸟"] = {
+    hp: 13000,
+    mp: 10500,
+    atk: 2000,
+    def: 1600,
+    spd: 180,
+    cr: 30,
+    cd: 190,
+    song: 420,
+    skills: [
+        { n: "激昂战歌", c: 2, mp: 290, d: 0, e: "攻歌", s: 0 },
+        { n: "舒缓谣曲", c: 2, mp: 320, d: -1.2 * 1.42, e: "治疗", s: 0 },
+        { n: "守护圣歌", c: 3, mp: 300, d: 0, e: "护盾", s: 0 },
+        { n: "净化小调", c: 2, mp: 270, d: 0, e: "驱散", s: 0 },
+        { n: "迅捷咏叹", c: 3, mp: 280, d: 0, e: "速度", s: 0 },
+        { n: "反击音波", c: 3, mp: 310, d: 1.5 * 1.42, e: "迟缓", s: 1 },
+        { n: "圣歌万物共鸣", c: 7, mp: 950, d: 2 * 1.42, e: "全域", s: 0 }
+    ],
+    passive(c) {
+        c.dmg *= 1.42;
+        c.mpBack = 38;
+        c.deathOnce = 1;
+        c.songMP = 6;
+        c.domainMP = 10;
+        c.mainSongExtra = 50;
+        c.subSongExtra = 50;
+        c.currentSong = null; // 当前演唱的歌曲
+        c.songStacks = 0; // 歌曲叠加层数
+        c.maxSongStacks = 3; // 最大歌曲层数
+        
+        // 设置技能实现
+        c.skillImpl = {
+            "激昂战歌": function(s, target, field) {
+                const allies = field.filter(x => x.side === this.side);
+                const atkBonus = 25 + (this.songStacks * 5); // 基础25%，每层歌曲+5%
+                allies.forEach(ally => {
+                    ally.buffs["激昂战歌"] = { st: 3, val: atkBonus }; // 攻击加成
+                });
+                this.currentSong = "激昂战歌";
+                this.songStacks = Math.min(this.songStacks + 1, this.maxSongStacks);
+                log(`${this.getDisplayName()} 演唱激昂战歌，全队攻击力提升${atkBonus}% (歌曲层数: ${this.songStacks})`);
+                return true;
+            },
+            
+            "舒缓谣曲": function(s, target, field) {
+                const heal = Math.floor(this.atk * -s.d * this.crit() * (1 + this.songStacks * 0.1));
+                const allies = field.filter(x => x.side === this.side);
+                allies.forEach(ally => {
+                    ally.hp = clamp(ally.hp + heal, 0, ally.maxhp);
+                    // 附加持续治疗
+                    ally.buffs["舒缓治愈"] = { st: 2, val: Math.floor(heal * 0.3) };
+                });
+                this.currentSong = "舒缓谣曲";
+                this.songStacks = Math.min(this.songStacks + 1, this.maxSongStacks);
+                log(`${this.getDisplayName()} 演唱舒缓谣曲，治疗全体友军 ${heal} HP (歌曲层数: ${this.songStacks})`);
+                return true;
+            },
+            
+            "守护圣歌": function(s, target, field) {
+                const shield = Math.floor(this.atk * (2.2 + this.songStacks * 0.3));
+                const allies = field.filter(x => x.side === this.side);
+                allies.forEach(ally => {
+                    ally.buffs["守护圣歌"] = { st: 3, val: shield };
+                });
+                this.currentSong = "守护圣歌";
+                this.songStacks = Math.min(this.songStacks + 1, this.maxSongStacks);
+                log(`${this.getDisplayName()} 演唱守护圣歌，全队获得 ${shield} 点护盾 (歌曲层数: ${this.songStacks})`);
+                return true;
+            },
+            
+            "净化小调": function(s, target, field) {
+                const allies = field.filter(x => x.side === this.side);
+                let cleansedCount = 0;
+                allies.forEach(ally => {
+                    // 清除debuff
+                    const debuffCount = Object.keys(ally.debuffs).length;
+                    Object.keys(ally.debuffs).forEach(debuff => {
+                        if (!debuff.includes("净化")) { // 避免清除自身效果
+                            delete ally.debuffs[debuff];
+                            cleansedCount++;
+                        }
+                    });
+                    // 免疫控制
+                    ally.buffs["净化庇护"] = { st: 2, val: 0 };
+                });
+                log(`${this.getDisplayName()} 演唱净化小调，清除 ${cleansedCount} 个负面状态，全队获得控制免疫`);
+                return true;
+            },
+            
+            "迅捷咏叹": function(s, target, field) {
+                const speedBonus = 30 + (this.songStacks * 8); // 基础30%，每层歌曲+8%
+                const allies = field.filter(x => x.side === this.side);
+                allies.forEach(ally => {
+                    ally.buffs["迅捷咏叹"] = { st: 3, val: speedBonus }; // 速度加成
+                    ally.buffs["行动优先"] = { st: 1, val: 0 }; // 下回合优先行动
+                });
+                this.currentSong = "迅捷咏叹";
+                this.songStacks = Math.min(this.songStacks + 1, this.maxSongStacks);
+                log(`${this.getDisplayName()} 演唱迅捷咏叹，全队速度提升${speedBonus}% (歌曲层数: ${this.songStacks})`);
+                return true;
+            },
+            
+            "反击音波": function(s, target, field) {
+                const damage = Math.floor(this.atk * s.d * this.crit());
+                const actualDamage = target.processDamage(damage, this, s.n);
+                if (actualDamage > 0) {
+                    log(`${this.getDisplayName()} 使用反击音波对 ${target.getDisplayName()} 造成 ${actualDamage} 伤害`);
+                }
+                target.debuffs["迟缓"] = { st: 2, val: 40 }; // 减速40%
+                target.debuffs["音波震荡"] = { st: 2, val: 15 }; // 全属性-15%
+                
+                // 根据当前歌曲获得额外效果
+                if (this.currentSong) {
+                    const extraEffect = this.getSongExtraEffect(this.currentSong, target, field);
+                    if (extraEffect) log(extraEffect);
+                }
+                return true;
+            },
+            
+            "圣歌万物共鸣": function(s, target, field) {
+                // 强化所有当前生效的歌曲效果
+                const allies = field.filter(x => x.side === this.side);
+                allies.forEach(ally => {
+                    Object.keys(ally.buffs).forEach(buffKey => {
+                        if (buffKey.includes("战歌") || buffKey.includes("谣曲") || buffKey.includes("圣歌") || buffKey.includes("咏叹")) {
+                            ally.buffs[buffKey].val += this.mainSongExtra; // 效果增强50%
+                            ally.buffs[buffKey].st += 2; // 持续时间+2回合
+                        }
+                    });
+                });
+                
+                // 对敌人造成伤害
+                const enemies = field.filter(x => x.side !== this.side && x.hp > 0);
+                enemies.forEach(enemy => {
+                    const damage = Math.floor(this.atk * s.d * this.crit() * (1 + this.songStacks * 0.2));
+                    const actualDamage = enemy.processDamage(damage, this, s.n);
+                    if (actualDamage > 0) {
+                        log(`${this.getDisplayName()} 的圣歌万物共鸣对 ${enemy.getDisplayName()} 造成 ${actualDamage} 伤害`);
+                    }
+                    enemy.debuffs["音波震荡"] = { st: 3, val: 20 + this.songStacks * 5 }; // 全属性降低
+                });
+                
+                this.buffs["万物共鸣"] = { st: 4, val: 40 + this.songStacks * 10 }; // 全队效果增强
+                this.songStacks = this.maxSongStacks; // 叠满歌曲层数
+                
+                log(`${this.getDisplayName()} 演唱圣歌万物共鸣，强化所有歌曲效果，歌曲层数叠满`);
+                return true;
+            }
+        };
+        
+        // 辅助方法：获取歌曲额外效果
+        c.getSongExtraEffect = function(songName, target, field) {
+            switch (songName) {
+                case "激昂战歌":
+                    const extraDamage = Math.floor(this.atk * 0.8 * this.crit() * (1 + this.songStacks * 0.1));
+                    const actualExtraDamage = target.processDamage(extraDamage, this, "激昂战歌额外效果");
+                    return `${this.getDisplayName()} 的激昂战歌产生共鸣，额外造成 ${actualExtraDamage} 伤害`;
+                
+                case "舒缓谣曲":
+                    const extraHeal = Math.floor(this.atk * 0.6 * (1 + this.songStacks * 0.1));
+                    const allies = field.filter(x => x.side === this.side);
+                    allies.forEach(ally => {
+                        ally.hp = clamp(ally.hp + extraHeal, 0, ally.maxhp);
+                    });
+                    return `${this.getDisplayName()} 的舒缓谣曲产生共鸣，额外治疗全体 ${extraHeal} HP`;
+                
+                case "守护圣歌":
+                    const extraShield = Math.floor(this.atk * 0.8 * (1 + this.songStacks * 0.1));
+                    const shieldAllies = field.filter(x => x.side === this.side);
+                    shieldAllies.forEach(ally => {
+                        if (ally.buffs["守护圣歌"]) {
+                            ally.buffs["守护圣歌"].val += extraShield;
+                        }
+                    });
+                    return `${this.getDisplayName()} 的守护圣歌产生共鸣，护盾值增加 ${extraShield}`;
+                
+                case "迅捷咏叹":
+                    const speedAllies = field.filter(x => x.side === this.side);
+                    speedAllies.forEach(ally => {
+                        if (ally.buffs["迅捷咏叹"]) {
+                            ally.buffs["迅捷咏叹"].val += 15 + this.songStacks * 3; // 额外加速
+                        }
+                    });
+                    return `${this.getDisplayName()} 的迅捷咏叹产生共鸣，速度进一步提升`;
+                
+                default:
+                    return "";
+            }
+        };
+        
+        // 设置回合逻辑
+        c.turnImpl = function(field) {
+            // 歌曲持续效果
+            if (this.currentSong) {
+                // 主歌额外MP消耗
+                this.mp -= this.songMP;
+                
+                // 检查MP是否足够维持歌曲
+                if (this.mp < this.songMP) {
+                    log(`${this.getDisplayName()} 因MP不足停止演唱 ${this.currentSong}`);
+                    this.currentSong = null;
+                    this.songStacks = 0;
+                } else {
+                    // 歌曲持续效果
+                    switch (this.currentSong) {
+                        case "激昂战歌":
+                            // 每回合额外攻击加成
+                            const attackAllies = field.filter(x => x.side === this.side);
+                            attackAllies.forEach(ally => {
+                                ally.buffs["战意"] = { st: 1, val: 10 + this.songStacks * 2 }; // 每回合攻击+10%+层数加成
+                            });
+                            break;
+                            
+                        case "舒缓谣曲":
+                            // 每回合持续治疗
+                            const healAllies = field.filter(x => x.side === this.side);
+                            const healAmount = Math.floor(this.atk * (0.4 + this.songStacks * 0.1));
+                            healAllies.forEach(ally => {
+                                ally.hp = clamp(ally.hp + healAmount, 0, ally.maxhp);
+                            });
+                            log(`${this.getDisplayName()} 的舒缓谣曲持续治疗全体 ${healAmount} HP`);
+                            break;
+                            
+                        case "守护圣歌":
+                            // 每回合护盾刷新
+                            const shieldAllies = field.filter(x => x.side === this.side);
+                            const shieldRefresh = Math.floor(this.atk * (0.3 + this.songStacks * 0.05));
+                            shieldAllies.forEach(ally => {
+                                if (ally.buffs["守护圣歌"]) {
+                                    ally.buffs["守护圣歌"].val += shieldRefresh;
+                                }
+                            });
+                            break;
+                    }
+                }
+            }
+            
+            // MP回复
+            if (roll(this.mpBack)) {
+                const mpRestore = Math.floor(this.maxmp * 0.05);
+                this.mp = clamp(this.mp + mpRestore, 0, this.maxmp);
+            }
+            
+            // 免死机制
+            if (this.hp <= 0 && this.deathOnce) {
+                this.hp = Math.floor(this.maxhp * 0.4);
+                this.deathOnce = 0;
+                this.buffs["终焉咏叹"] = { st: 2, val: 0 };
+                
+                // 复活时演唱终焉咏叹
+                const allies = field.filter(x => x.side === this.side);
+                allies.forEach(ally => {
+                    ally.buffs["终焉咏叹"] = { st: 3, val: 30 }; // 全属性+30%
+                });
+                
+                // 重置歌曲层数
+                this.songStacks = this.maxSongStacks;
+                
+                log(`${this.getDisplayName()} 触发终焉咏叹，恢复40%HP并强化全队，歌曲层数重置为满层`);
+            }
+        };
+    }
+};
+
+// === js/characters/legeng.js ===
+// 乐梗 角色实现
+DB["乐梗"] = {
+    hp: 12000,
+    mp: 10000,
+    atk: 2000,
+    def: 1400,
+    spd: 175,
+    cr: 25,
+    cd: 180,
+    happy: 380,
+    skills: [
+        { n: "笑颜脉冲", c: 2, mp: 260, d: 0, e: "群体增益", s: 0 },
+        { n: "快乐链接", c: 3, mp: 300, d: 0, e: "单体增益", s: 0 },
+        { n: "欢乐鼓舞", c: 2, mp: 280, d: 0, e: "输出强化", s: 0 },
+        { n: "烦躁射线", c: 3, mp: 320, d: 0, e: "单体减益", s: 1 },
+        { n: "混乱氛围", c: 4, mp: 350, d: 0.4, e: "范围减益", s: 1 },
+        { n: "情绪干扰", c: 5, mp: 380, d: 0, e: "群体控制", s: 1 },
+        { n: "快乐・全域狂欢", c: 8, mp: 900, d: 3 * 1.38, e: "终极增益", s: 0 }
+    ],
+    passive(c) {
+        c.happyConcentration = 38; // 快乐浓度38%
+        c.happyResonance = false;
+        c.smileGuardTriggers = 4; // 笑颜守护触发次数
+        c.smileGuardUsed = 0;
+        c.happyPoints = 0; // 快乐点数
+        c.lockHP = 1; // 免死机制
+        c.deathOnce = 1;
+        c.rebirthUsed = false; // 快乐重生使用次数
+        c.maxHappyPoints = 100; // 最大快乐点数
+        
+        // 设置技能实现
+        c.skillImpl = {
+            "笑颜脉冲": function(s, target, field) {
+                const allies = field.filter(x => x.side === this.side);
+                const hpRegen = 8 + Math.floor(this.happyPoints / 20); // 基础8%，每20快乐点数+1%
+                const mpRegen = 6 + Math.floor(this.happyPoints / 25); // 基础6%，每25快乐点数+1%
+                
+                allies.forEach(ally => {
+                    ally.buffs["笑颜buff"] = { st: 2, val: hpRegen }; // HP每回合恢复
+                    ally.buffs["快乐能量"] = { st: 2, val: mpRegen }; // MP每回合恢复
+                });
+                
+                this.happyPoints = Math.min(this.happyPoints + 15, this.maxHappyPoints);
+                log(`<div class="happy">${this.getDisplayName()} 使用笑颜脉冲，全队获得持续恢复效果，快乐点数+15</div>`);
+                return true;
+            },
+            
+            "快乐链接": function(s, target, field) {
+                const atkBonus = 20 + Math.floor(this.happyPoints / 10); // 基础20%，每10快乐点数+1%
+                const spdBonus = 15 + Math.floor(this.happyPoints / 15); // 基础15%，每15快乐点数+1%
+                
+                target.buffs["快乐链接"] = { st: 3, val: atkBonus }; // 攻击加成
+                target.buffs["快乐加速"] = { st: 3, val: spdBonus }; // 速度加成
+                target.buffs["快乐庇护"] = { st: 2, val: 25 }; // 受到伤害-25%
+                
+                this.happyPoints = Math.min(this.happyPoints + 10, this.maxHappyPoints);
+                log(`<div class="happy">${this.getDisplayName()} 使用快乐链接，${target.getDisplayName()} 获得强力增益，快乐点数+10</div>`);
+                return true;
+            },
+            
+            "欢乐鼓舞": function(s, target, field) {
+                const allies = field.filter(x => x.side === this.side);
+                const outputBonus = 25 + Math.floor(this.happyPoints / 8); // 基础25%，每8快乐点数+1%
+                
+                allies.forEach(ally => {
+                    ally.buffs["欢乐鼓舞"] = { st: 2, val: outputBonus }; // 输出强化
+                    ally.buffs["快乐暴击"] = { st: 2, val: 15 }; // 暴击率+15%
+                });
+                
+                this.happyPoints = Math.min(this.happyPoints + 12, this.maxHappyPoints);
+                log(`<div class="happy">${this.getDisplayName()} 使用欢乐鼓舞，全队输出提升${outputBonus}%，快乐点数+12</div>`);
+                return true;
+            },
+            
+            "烦躁射线": function(s, target, field) {
+                target.debuffs["烦躁"] = { st: 3, val: 30 }; // 攻击-30%
+                target.debuffs["失误"] = { st: 2, val: 20 }; // 命中-20%
+                
+                // 根据快乐点数增加效果
+                if (this.happyPoints >= 50) {
+                    target.debuffs["混乱"] = { st: 1, val: 0 }; // 混乱1回合
+                    log(`<div class="happy">${this.getDisplayName()} 的烦躁射线使 ${target.getDisplayName()} 陷入混乱</div>`);
+                }
+                
+                this.happyPoints = Math.min(this.happyPoints + 8, this.maxHappyPoints);
+                log(`<div class="happy">${this.getDisplayName()} 使用烦躁射线，削弱 ${target.getDisplayName()}，快乐点数+8</div>`);
+                return true;
+            },
+            
+            "混乱氛围": function(s, target, field) {
+                const enemies = field.filter(x => x.side !== this.side && x.hp > 0);
+                const damage = Math.floor(this.atk * s.d * this.crit());
+                
+                enemies.forEach(enemy => {
+                    const actualDamage = enemy.processDamage(damage, this, s.n);
+                    if (actualDamage > 0) {
+                        log(`<div class="happy">${this.getDisplayName()} 使用混乱氛围对 ${enemy.getDisplayName()} 造成 ${actualDamage} 伤害</div>`);
+                    }
+                    
+                    enemy.debuffs["混乱氛围"] = { st: 2, val: 25 }; // 全属性-25%
+                    if (roll(30 + Math.floor(this.happyPoints / 5))) { // 基础30%，每5快乐点数+1%概率
+                        enemy.debuffs["自残"] = { st: 1, val: 0 }; // 自残1回合
+                        log(`<div class="happy">${enemy.getDisplayName()} 陷入自残状态</div>`);
+                    }
+                });
+                
+                this.happyPoints = Math.min(this.happyPoints + 20, this.maxHappyPoints);
+                log(`<div class="happy">${this.getDisplayName()} 使用混乱氛围，扰乱所有敌人，快乐点数+20</div>`);
+                return true;
+            },
+            
+            "情绪干扰": function(s, target, field) {
+                const enemies = field.filter(x => x.side !== this.side && x.hp > 0);
+                
+                enemies.forEach(enemy => {
+                    enemy.debuffs["情绪干扰"] = { st: 2, val: 0 }; // 无法使用技能2回合
+                    enemy.debuffs["沮丧"] = { st: 3, val: 40 }; // 伤害输出-40%
+                    
+                    // 高快乐点数时额外效果
+                    if (this.happyPoints >= 75) {
+                        enemy.debuffs["绝望"] = { st: 1, val: 0 }; // 绝望1回合（无法行动）
+                        log(`<div class="happy">${enemy.getDisplayName()} 陷入绝望，无法行动</div>`);
+                    }
+                });
+                
+                this.happyPoints = Math.min(this.happyPoints + 25, this.maxHappyPoints);
+                log(`<div class="happy">${this.getDisplayName()} 使用情绪干扰，控制所有敌人，快乐点数+25</div>`);
+                return true;
+            },
+            
+            "快乐・全域狂欢": function(s, target, field) {
+                const heal = Math.floor(this.atk * -s.d * (1 + this.happyPoints / 100));
+                const allies = field.filter(x => x.side === this.side);
+                const enemies = field.filter(x => x.side !== this.side);
+                
+                // 治疗友军
+                allies.forEach(ally => {
+                    ally.hp = clamp(ally.hp + heal, 0, ally.maxhp);
+                    ally.buffs["狂欢状态"] = { st: 3, val: 50 + Math.floor(this.happyPoints / 2) }; // 快乐增益效果
+                    ally.buffs["快乐无敌"] = { st: 1, val: 0 }; // 免疫伤害1回合
+                });
+                
+                // 削弱敌人
+                enemies.forEach(enemy => {
+                    enemy.debuffs["集体烦躁"] = { st: 2, val: 20 + Math.floor(this.happyPoints / 5) }; // 输出降低
+                    enemy.debuffs["技能冷却"] = { st: 2, val: 0 }; // 技能冷却+1回合
+                });
+                
+                // 自身恢复
+                this.mp = clamp(this.mp + this.maxmp * 0.3, 0, this.maxmp);
+                this.hp = clamp(this.hp + this.maxhp * 0.2, 0, this.maxhp);
+                
+                // 刷新非终极技能冷却
+                Object.keys(this.cooldowns).forEach(skill => {
+                    if (skill !== "快乐・全域狂欢") this.cooldowns[skill] = 0;
+                });
+                
+                // 消耗快乐点数获得额外效果
+                const extraEffect = Math.floor(this.happyPoints / 10);
+                this.buffs["快乐巅峰"] = { st: 3, val: extraEffect * 5 }; // 每10点快乐点数提供5%全属性加成
+                
+                log(`<div class="happy">${this.getDisplayName()} 使用快乐・全域狂欢，全队恢复 ${heal} HP，进入狂欢状态，消耗 ${this.happyPoints} 快乐点数获得 ${extraEffect * 5}% 全属性加成</div>`);
+                
+                this.happyPoints = 0; // 消耗所有快乐点数
+                return true;
+            }
+        };
+        
+        // 设置回合逻辑
+        c.turnImpl = function(field) {
+            // 快乐共鸣
+            const happySkillsUsed = this.currentTurnSkills.filter(s => s.e.includes("增益")).length;
+            if (happySkillsUsed >= 2) {
+                this.happyResonance = true;
+                const allies = field.filter(x => x.side === this.side);
+                const resonanceBonus = 15 + Math.floor(this.happyPoints / 10);
+                allies.forEach(ally => {
+                    ally.buffs["快乐光环"] = { st: 1, val: resonanceBonus }; // 输出属性+%，受到伤害-10%
+                });
+                this.mp = clamp(this.mp + this.maxmp * 0.2, 0, this.maxmp);
+                this.happyPoints = Math.min(this.happyPoints + 10, this.maxHappyPoints);
+                log(`<div class="happy">${this.getDisplayName()} 触发快乐共鸣，全队获得快乐光环，快乐点数+10</div>`);
+            }
+            
+            // 笑颜守护
+            const lowHPAllies = field.filter(x => x.side === this.side && x.hp < x.maxhp * 0.2 && x.hp > 0);
+            const controlledAllies = field.filter(x => x.side === this.side && Object.keys(x.debuffs).some(d => d.includes("控制")));
+            
+            if ((lowHPAllies.length > 0 || controlledAllies.length > 0) && this.smileGuardUsed < this.smileGuardTriggers) {
+                const target = lowHPAllies[0] || controlledAllies[0];
+                const healAmount = target.maxhp * (0.25 + this.happyPoints / 400); // 基础25%，每100快乐点数+2.5%
+                target.hp = clamp(target.hp + healAmount, 0, target.maxhp);
+                target.buffs["快乐免伤"] = { st: 2, val: 25 + Math.floor(this.happyPoints / 4) }; // 受到伤害降低
+                
+                // 清除控制debuff
+                Object.keys(target.debuffs).forEach(key => {
+                    if (key.includes("控制")) delete target.debuffs[key];
+                });
+                
+                this.smileGuardUsed++;
+                this.happyPoints = Math.min(this.happyPoints + 15, this.maxHappyPoints);
+                log(`<div class="happy">${this.getDisplayName()} 触发笑颜守护，保护 ${target.getDisplayName()}，快乐点数+15</div>`);
+            }
+            
+            // 快乐点数自然增长
+            if (this.happyPoints < this.maxHappyPoints) {
+                this.happyPoints = Math.min(this.happyPoints + 3, this.maxHappyPoints);
+            }
+            
+            // 快乐重生
+            if (this.hp <= 0 && this.lockHP && this.deathOnce && !this.rebirthUsed) {
+                this.hp = Math.floor(this.maxhp * (0.4 + this.happyPoints / 250)); // 基础40%，每100快乐点数+4%
+                this.mp = clamp(this.mp + this.maxmp * 0.3, 0, this.maxmp);
+                this.deathOnce = 0;
+                this.rebirthUsed = true;
+                
+                const allies = field.filter(x => x.side === this.side);
+                const hopeBonus = 10 + Math.floor(this.happyPoints / 10);
+                allies.forEach(ally => {
+                    ally.buffs["希望光环"] = { st: 2, val: hopeBonus }; // 每回合恢复HP/MP，受到伤害降低
+                });
+                
+                this.buffs["重生免疫"] = { st: 1, val: 0 }; // 免疫控制1回合
+                log(`<div class="happy">${this.getDisplayName()} 触发快乐重生，恢复${Math.floor((0.4 + this.happyPoints / 250) * 100)}%HP和30%MP，消耗所有快乐点数</div>`);
+                
+                this.happyPoints = 0; // 消耗所有快乐点数
+            }
+        };
+        
+        log(`<div class="happy">${c.getDisplayName()} 快乐传播者激活，快乐浓度: ${c.happyConcentration}%</div>`);
+    }
+};
+
+// === js/characters/johnson.js ===
+// Johnson 角色实现
+DB["Johnson"] = {
+    hp: 25000,
+    mp: 4200,
+    atk: 1200,
+    def: 2200,
+    spd: 110,
+    cr: 10,
+    cd: 150,
+    holy: 500,
+    skills: [
+        { n: "光辉圣壁・全域", c: 6, mp: 500, d: 0, e: "圣壁领域", s: 0 },
+        { n: "圣壁・定向屏障", c: 3, mp: 300, d: 0, e: "定向庇护", s: 0 },
+        { n: "圣壁・群体免伤", c: 4, mp: 350, d: 0, e: "团队免伤", s: 0 },
+        { n: "圣壁・伤害转移", c: 2, mp: 200, d: 0, e: "伤害转移", s: 0 },
+        { n: "圣壁・反伤脉冲", c: 0, mp: 0, d: 0, e: "被动反伤", s: 0 },
+        { n: "圣壁・终极防护", c: 0, mp: 0, d: 0, e: "终极防御", s: 0 }
+    ],
+    passive(c) {
+        c.holyShieldStrength = 500; // 圣壁强度
+        c.mpBack = 40; // 光明系回蓝比例提升
+        c.immune.add("减速");
+        c.immune.add("禁锢");
+        c.lockHP = 1; // 锁血机制
+        c.deathOnce = 1; // 圣壁不朽被动
+        
+        // 圣壁领域相关属性
+        c.sanctuaryActive = false;
+        c.sanctuaryTurns = 0;
+        c.sanctuaryTarget = null;
+        c.damageTakenThisTurn = 0;
+        c.damageConverted = 0;
+        
+        // 反伤机制
+        c.reflectDamage = 0;
+        c.reflectMax = 2400;
+        
+        // 庇护光环
+        c.allyDefBonus = 5;
+        c.maxAllyDefBonus = 25;
+        c.allyDefStacks = 0;
+        
+        // 设置技能实现
+        c.skillImpl = {
+            "光辉圣壁・全域": function(s, target, field) {
+                this.sanctuaryActive = true;
+                this.sanctuaryTurns = 4;
+                
+                const allies = field.filter(x => x.side === this.side);
+                const sanctuaryShield = Math.floor(this.holyShieldStrength * 3);
+                
+                allies.forEach(ally => {
+                    ally.buffs["光辉圣壁"] = { st: 4, val: sanctuaryShield };
+                    ally.buffs["圣壁庇护"] = { st: 4, val: 30 }; // 受到伤害-30%
+                });
+                
+                this.buffs["圣壁核心"] = { st: 4, val: 0 };
+                log(`<div class="holy-wall">${this.getDisplayName()} 展开光辉圣壁・全域，全队获得 ${sanctuaryShield} 点护盾和30%减伤</div>`);
+                return true;
+            },
+            
+            "圣壁・定向屏障": function(s, target, field) {
+                const barrierShield = Math.floor(this.holyShieldStrength * 4);
+                target.buffs["定向屏障"] = { st: 3, val: barrierShield };
+                target.buffs["绝对防御"] = { st: 2, val: 50 }; // 防御+50%
+                target.buffs["屏障免疫"] = { st: 1, val: 0 }; // 免疫控制1回合
+                
+                this.sanctuaryTarget = target;
+                log(`<div class="holy-wall">${this.getDisplayName()} 为 ${target.getDisplayName()} 施加定向屏障，提供 ${barrierShield} 点护盾</div>`);
+                return true;
+            },
+            
+            "圣壁・群体免伤": function(s, target, field) {
+                const allies = field.filter(x => x.side === this.side);
+                const damageReduction = 40 + Math.floor(this.allyDefStacks * 2); // 基础40%，每层防御叠加+2%
+                
+                allies.forEach(ally => {
+                    ally.buffs["群体免伤"] = { st: 2, val: damageReduction }; // 受到伤害降低
+                    ally.buffs["圣壁守护"] = { st: 2, val: Math.floor(this.holyShieldStrength * 1.5) }; // 额外护盾
+                });
+                
+                log(`<div class="holy-wall">${this.getDisplayName()} 使用圣壁・群体免伤，全队受到伤害降低${damageReduction}%</div>`);
+                return true;
+            },
+            
+            "圣壁・伤害转移": function(s, target, field) {
+                this.buffs["伤害转移"] = { st: 3, val: 60 }; // 转移60%受到的伤害
+                this.buffs["转移护盾"] = { st: 3, val: Math.floor(this.holyShieldStrength * 2) }; // 转移伤害形成的护盾
+                
+                log(`<div class="holy-wall">${this.getDisplayName()} 激活圣壁・伤害转移，将60%伤害转移并形成护盾</div>`);
+                return true;
+            },
+            
+            "圣壁・反伤脉冲": function(s, target, field) {
+                // 被动技能，无需主动使用
+                log(`<div class="holy-wall">${this.getDisplayName()} 的圣壁・反伤脉冲已激活</div>`);
+                return true;
+            },
+            
+            "圣壁・终极防护": function(s, target, field) {
+                this.buffs["终极防护"] = { st: 2, val: 0 };
+                this.isInvincible = true; // 无敌2回合
+                
+                const allies = field.filter(x => x.side === this.side);
+                const ultimateShield = Math.floor(this.holyShieldStrength * 5);
+                
+                allies.forEach(ally => {
+                    ally.buffs["终极护盾"] = { st: 2, val: ultimateShield };
+                    ally.buffs["防护领域"] = { st: 2, val: 80 }; // 受到伤害-80%
+                });
+                
+                // 重置所有技能冷却
+                Object.keys(this.cooldowns).forEach(skill => {
+                    this.cooldowns[skill] = 0;
+                });
+                
+                log(`<div class="holy-wall">${this.getDisplayName()} 使用圣壁・终极防护，全队无敌2回合并获得 ${ultimateShield} 点护盾</div>`);
+                return true;
+            }
+        };
+        
+        // 重写processDamage方法处理伤害转移
+        const originalProcessDamage = c.processDamage;
+        c.processDamage = function(damage, attacker, skillName) {
+            // 伤害转移处理
+            if (this.buffs["伤害转移"]) {
+                const transferRate = this.buffs["伤害转移"].val / 100;
+                const transferredDamage = Math.floor(damage * transferRate);
+                const remainingDamage = damage - transferredDamage;
+                
+                // 将转移的伤害转化为护盾
+                if (this.buffs["转移护盾"]) {
+                    this.buffs["转移护盾"].val += transferredDamage;
+                }
+                
+                this.damageConverted += transferredDamage;
+                log(`<div class="holy-wall">${this.getDisplayName()} 的伤害转移将 ${transferredDamage} 伤害转化为护盾</div>`);
+                
+                // 只处理剩余伤害
+                if (remainingDamage <= 0) return 0;
+                damage = remainingDamage;
+            }
+            
+            // 记录本回合受到的伤害
+            this.damageTakenThisTurn += damage;
+            
+            // 调用原始处理方法
+            return originalProcessDamage.call(this, damage, attacker, skillName);
+        };
+        
+        // 设置回合逻辑
+        c.turnImpl = function(field) {
+            // 圣壁领域效果
+            if (this.sanctuaryActive) {
+                this.sanctuaryTurns--;
+                
+                if (this.sanctuaryTurns <= 0) {
+                    this.sanctuaryActive = false;
+                    log(`<div class="holy-wall">${this.getDisplayName()} 的光辉圣壁领域消散了</div>`);
+                } else {
+                    // 圣壁领域持续效果
+                    const allies = field.filter(x => x.side === this.side);
+                    const healAmount = Math.floor(this.holyShieldStrength * 0.1);
+                    
+                    allies.forEach(ally => {
+                        ally.hp = clamp(ally.hp + healAmount, 0, ally.maxhp);
+                        // 刷新护盾
+                        if (ally.buffs["光辉圣壁"]) {
+                            ally.buffs["光辉圣壁"].val = Math.floor(this.holyShieldStrength * 3);
+                        }
+                    });
+                    
+                    log(`<div class="holy-wall">${this.getDisplayName()} 的圣壁领域治疗全体 ${healAmount} HP</div>`);
+                }
+            }
+            
+            // 定向屏障保护
+            if (this.sanctuaryTarget && this.sanctuaryTarget.hp > 0) {
+                const barrierRefresh = Math.floor(this.holyShieldStrength * 0.5);
+                if (this.sanctuaryTarget.buffs["定向屏障"]) {
+                    this.sanctuaryTarget.buffs["定向屏障"].val += barrierRefresh;
+                }
+            }
+            
+            // 反伤脉冲
+            if (this.damageTakenThisTurn > 0) {
+                this.reflectDamage = Math.min(this.damageTakenThisTurn * 0.4, this.reflectMax);
+                this.hasReflect = true;
+                log(`<div class="holy-wall">${this.getDisplayName()} 本回合受到 ${this.damageTakenThisTurn} 伤害，反伤值: ${this.reflectDamage}</div>`);
+            }
+            
+            // 庇护光环
+            const allies = field.filter(x => x.side === this.side && x !== this);
+            if (allies.length > 0) {
+                this.allyDefStacks = Math.min(allies.length, 5); // 最多5层
+                const totalDefBonus = this.allyDefBonus * this.allyDefStacks;
+                
+                allies.forEach(ally => {
+                    ally.buffs["庇护光环"] = { st: 1, val: totalDefBonus }; // 防御加成
+                });
+            }
+            
+            // MP回复
+            if (roll(this.mpBack)) {
+                const mpRestore = Math.floor(this.maxmp * 0.06);
+                this.mp = clamp(this.mp + mpRestore, 0, this.maxmp);
+            }
+            
+            // 圣壁不朽
+            if (this.hp <= 0 && this.lockHP && this.deathOnce) {
+                this.hp = 1;
+                this.deathOnce = 0;
+                this.buffs["圣壁不朽"] = { st: 3, val: 0 };
+                
+                // 复活时激活所有防御技能
+                this.sanctuaryActive = true;
+                this.sanctuaryTurns = 3;
+                this.buffs["伤害转移"] = { st: 3, val: 80 }; // 提高转移比例
+                
+                const allies = field.filter(x => x.side === this.side);
+                const resurrectionShield = Math.floor(this.holyShieldStrength * 4);
+                allies.forEach(ally => {
+                    ally.buffs["圣壁复苏"] = { st: 2, val: resurrectionShield };
+                });
+                
+                log(`<div class="holy-wall">${this.getDisplayName()} 触发圣壁不朽，锁血1点并强化所有防御技能</div>`);
+            }
+            
+            // 重置伤害记录
+            this.damageTakenThisTurn = 0;
+        };
+        
+        log(`<div class="holy-wall">${c.getDisplayName()} 光辉圣壁已激活，圣壁强度: ${c.holyShieldStrength}</div>`);
+    }
+};
+
+// === js/characters/zhanlan.js ===
+// 湛蓝 角色实现
+DB["湛蓝"] = {
+    hp: 14000,
+    mp: 8500,
+    atk: 2000,
+    def: 1600,
+    spd: 150,
+    cr: 20,
+    cd: 180,
+    sand: 450,
+    skills: [
+        { n: "尘沙之海全域", c: 5, mp: 600, d: 1.2, e: "沙蚀", s: 1 },
+        { n: "沙暴突袭", c: 3, mp: 450, d: 2.2, e: "禁锢", s: 1 },
+        { n: "沙墙筑垒", c: 2, mp: 300, d: 1, e: "沙墙", s: 0 },
+        { n: "沙尘穿刺", c: 4, mp: 380, d: 2.8, e: "沙爆", s: 1 },
+        { n: "沙遁瞬移", c: 2, mp: 250, d: 0, e: "位移", s: 0 },
+        { n: "尘沙具象", c: 6, mp: 500, d: 1.5, e: "召唤", s: 0 },
+        { n: "尘沙寂灭", c: 8, mp: 1200, d: 3.8, e: "终", s: 0 }
+    ],
+    passive(c) {
+        c.dmg *= 1.3;
+        c.mpBack = 35;
+        c.lockHP = 1;
+        c.sandMax = 7; // 沙蚀最大层数
+        c.terrainDef = 8;
+        c.terrainMax = 40;
+        c.allySandDmg = 15;
+        c.reviveHP = 20;
+        c.reviveReset = 1;
+        c.sandTerrain = false; // 沙尘地形是否激活
+        c.sandTerrainTurns = 0; // 沙尘地形剩余回合
+        
+        // 设置技能实现
+        c.skillImpl = {
+            "尘沙之海全域": function(s, target, field) {
+                this.sandTerrain = true;
+                this.sandTerrainTurns = 5;
+                
+                const enemies = field.filter(x => x.side !== this.side && x.hp > 0);
+                enemies.forEach(enemy => {
+                    const damage = Math.floor(this.atk * s.d * this.crit());
+                    const actualDamage = enemy.processDamage(damage, this, s.n);
+                    if (actualDamage > 0) {
+                        log(`${this.getDisplayName()} 使用尘沙之海全域对 ${enemy.getDisplayName()} 造成 ${actualDamage} 伤害`);
+                    }
+                    
+                    // 附加沙蚀效果
+                    if (!enemy.debuffs["沙蚀"]) {
+                        enemy.debuffs["沙蚀"] = { st: 4, val: 0 };
+                    }
+                    enemy.debuffs["沙蚀"].val = Math.min(enemy.debuffs["沙蚀"].val + 3, this.sandMax);
+                    enemy.debuffs["沙尘视野"] = { st: 3, val: 30 }; // 命中-30%
+                });
+                
+                log(`${this.getDisplayName()} 展开尘沙之海全域，沙尘地形持续5回合`);
+                return true;
+            },
+            
+            "沙暴突袭": function(s, target, field) {
+                const damage = Math.floor(this.atk * s.d * this.crit());
+                const actualDamage = target.processDamage(damage, this, s.n);
+                if (actualDamage > 0) {
+                    log(`${this.getDisplayName()} 使用沙暴突袭对 ${target.getDisplayName()} 造成 ${actualDamage} 伤害`);
+                }
+                
+                target.debuffs["沙暴禁锢"] = { st: 2, val: 0 }; // 无法行动2回合
+                target.debuffs["沙蚀"] = { st: 4, val: (target.debuffs["沙蚀"]?.val || 0) + 2 };
+                
+                log(`${target.getDisplayName()} 被沙暴禁锢并叠加沙蚀`);
+                return true;
+            },
+            
+            "沙墙筑垒": function(s, target, field) {
+                const shield = Math.floor(this.atk * 2.5 * (1 + (this.sandTerrain ? 0.3 : 0)));
+                const allies = field.filter(x => x.side === this.side);
+                
+                allies.forEach(ally => {
+                    ally.buffs["沙墙护盾"] = { st: 3, val: shield };
+                    // 沙尘地形下额外效果
+                    if (this.sandTerrain) {
+                        ally.buffs["沙尘庇护"] = { st: 2, val: 20 }; // 防御+20%
+                    }
+                });
+                
+                log(`${this.getDisplayName()} 使用沙墙筑垒，全队获得 ${shield} 点护盾${this.sandTerrain ? '和沙尘庇护' : ''}`);
+                return true;
+            },
+            
+            "沙尘穿刺": function(s, target, field) {
+                // 根据沙蚀层数增加伤害
+                const sandStacks = target.debuffs["沙蚀"]?.val || 0;
+                const sandBonus = 1 + (sandStacks * 0.15);
+                const damage = Math.floor(this.atk * s.d * this.crit() * sandBonus);
+                const actualDamage = target.processDamage(damage, this, s.n);
+                
+                if (actualDamage > 0) {
+                    log(`${this.getDisplayName()} 使用沙尘穿刺对 ${target.getDisplayName()} 造成 ${actualDamage} 伤害 (沙蚀加成: ${Math.floor((sandBonus - 1) * 100)}%)`);
+                }
+                
+                // 沙爆效果 - 消耗沙蚀层数造成额外伤害
+                if (sandStacks > 0) {
+                    const explosionDamage = Math.floor(this.atk * 0.5 * sandStacks);
+                    target.hp = clamp(target.hp - explosionDamage, 0, target.maxhp);
+                    log(`${target.getDisplayName()} 的沙蚀层数爆炸，造成 ${explosionDamage} 额外伤害`);
+                    delete target.debuffs["沙蚀"];
+                }
+                
+                return true;
+            },
+            
+            "沙遁瞬移": function(s, target, field) {
+                // 清除自身debuff
+                Object.keys(this.debuffs).forEach(key => {
+                    if (!key.includes("沙遁")) {
+                        delete this.debuffs[key];
+                    }
+                });
+                
+                this.buffs["沙遁"] = { st: 2, val: 40 }; // 闪避+40%
+                this.buffs["沙尘加速"] = { st: 2, val: 25 }; // 速度+25%
+                
+                // 沙尘地形下额外效果
+                if (this.sandTerrain) {
+                    this.mp = clamp(this.mp + this.maxmp * 0.15, 0, this.maxmp);
+                    log(`${this.getDisplayName()} 使用沙遁瞬移，清除负面状态，在沙尘地形中恢复15%MP`);
+                } else {
+                    log(`${this.getDisplayName()} 使用沙遁瞬移，清除负面状态`);
+                }
+                
+                return true;
+            },
+            
+            "尘沙具象": function(s, target, field) {
+                // 召唤沙尘造物
+                this.buffs["尘沙具象"] = { st: 4, val: 0 };
+                
+                // 根据沙尘地形决定召唤数量
+                const summonCount = this.sandTerrain ? 3 : 2;
+                
+                for (let i = 0; i < summonCount; i++) {
+                    // 沙尘造物提供增益
+                    const allies = field.filter(x => x.side === this.side);
+                    allies.forEach(ally => {
+                        ally.buffs["沙尘造物"] = { st: 3, val: 15 }; // 全属性+15%
+                    });
+                }
+                
+                log(`${this.getDisplayName()} 使用尘沙具象，召唤 ${summonCount} 个沙尘造物强化全队`);
+                return true;
+            },
+            
+            "尘沙寂灭": function(s, target, field) {
+                const enemies = field.filter(x => x.side !== this.side && x.hp > 0);
+                let totalDamage = 0;
+                
+                enemies.forEach(enemy => {
+                    // 基础伤害
+                    const baseDamage = Math.floor(this.atk * s.d * this.crit());
+                    const actualBaseDamage = enemy.processDamage(baseDamage, this, s.n);
+                    totalDamage += actualBaseDamage;
+                    
+                    // 沙蚀额外伤害
+                    const sandStacks = enemy.debuffs["沙蚀"]?.val || 0;
+                    if (sandStacks > 0) {
+                        const sandDamage = Math.floor(this.atk * 0.8 * sandStacks);
+                        enemy.hp = clamp(enemy.hp - sandDamage, 0, enemy.maxhp);
+                        totalDamage += sandDamage;
+                        log(`${enemy.getDisplayName()} 的 ${sandStacks} 层沙蚀造成 ${sandDamage} 额外伤害`);
+                    }
+                    
+                    // 清除沙蚀
+                    delete enemy.debuffs["沙蚀"];
+                    
+                    // 高概率禁锢
+                    if (roll(80)) {
+                        enemy.debuffs["尘沙禁锢"] = { st: 3, val: 0 };
+                        log(`${enemy.getDisplayName()} 被尘沙禁锢`);
+                    }
+                });
+                
+                // 强化沙尘地形
+                if (this.sandTerrain) {
+                    this.sandTerrainTurns += 3;
+                    log(`尘沙寂灭强化了沙尘地形，延长3回合`);
+                }
+                
+                log(`${this.getDisplayName()} 使用尘沙寂灭，造成总计 ${totalDamage} 伤害，清除所有沙蚀`);
+                return true;
+            }
+        };
+        
+        // 设置回合逻辑
+        c.turnImpl = function(field) {
+            // 沙尘地形效果
+            if (this.sandTerrain) {
+                this.sandTerrainTurns--;
+                
+                if (this.sandTerrainTurns <= 0) {
+                    this.sandTerrain = false;
+                    log(`${this.getDisplayName()} 的沙尘地形消散了`);
+                } else {
+                    // 沙尘地形持续效果
+                    const enemies = field.filter(x => x.side !== this.side && x.hp > 0);
+                    enemies.forEach(enemy => {
+                        // 每回合叠加沙蚀
+                        if (!enemy.debuffs["沙蚀"]) {
+                            enemy.debuffs["沙蚀"] = { st: 2, val: 0 };
+                        }
+                        enemy.debuffs["沙蚀"].val = Math.min(enemy.debuffs["沙蚀"].val + 1, this.sandMax);
+                        
+                        // 沙尘伤害
+                        const terrainDamage = Math.floor(this.atk * 0.3);
+                        enemy.hp = clamp(enemy.hp - terrainDamage, 0, enemy.maxhp);
+                    });
+                    
+                    // 友军在沙尘地形中获得防御加成
+                    const allies = field.filter(x => x.side === this.side);
+                    allies.forEach(ally => {
+                        if (!ally.buffs["地形防御"]) {
+                            ally.buffs["地形防御"] = { st: 1, val: this.terrainDef };
+                        } else {
+                            ally.buffs["地形防御"].val = Math.min(ally.buffs["地形防御"].val + this.terrainDef, this.terrainMax);
+                        }
+                    });
+                }
+            }
+            
+            // 沙蚀持续伤害
+            const enemiesWithSand = field.filter(x => x.side !== this.side && x.debuffs["沙蚀"]);
+            enemiesWithSand.forEach(enemy => {
+                const stacks = enemy.debuffs["沙蚀"].val;
+                if (stacks >= 3) {
+                    const sandDamage = Math.floor(this.atk * 0.2 * stacks);
+                    enemy.hp = clamp(enemy.hp - sandDamage, 0, enemy.maxhp);
+                    log(`${enemy.getDisplayName()} 的沙蚀造成 ${sandDamage} 持续伤害`);
+                }
+            });
+            
+            // MP回复
+            if (roll(this.mpBack)) {
+                const mpRestore = Math.floor(this.maxmp * 0.04);
+                this.mp = clamp(this.mp + mpRestore, 0, this.maxmp);
+            }
+            
+            // 锁血保命
+            if (this.hp <= 0 && this.lockHP && this.reviveReset) {
+                this.hp = Math.floor(this.maxhp * this.reviveHP / 100);
+                this.reviveReset = 0;
+                this.buffs["沙尘重生"] = { st: 2, val: 0 };
+                
+                // 复活时激活沙尘地形
+                this.sandTerrain = true;
+                this.sandTerrainTurns = 3;
+                
+                log(`${this.getDisplayName()} 触发沙尘重生，恢复${this.reviveHP}%HP并激活沙尘地形`);
+            }
+        };
+    }
+};
+
+// === js/characters/naitang.js ===
+// 奶棠 角色实现
+DB["奶棠"] = {
+    hp: 14000,
+    mp: 11000,
+    atk: 1800,
+    def: 1400,
+    spd: 170,
+    cr: 30,
+    cd: 200,
+    holy: 400,
+    skills: [
+        { n: "圣光脉冲", c: 2, mp: 280, d: -1.26, e: "群体治疗", s: 0 },
+        { n: "生命绑定", c: 3, mp: 320, d: -2.52, e: "单体治疗", s: 0 },
+        { n: "圣光净化", c: 2, mp: 300, d: -1.89, e: "驱散治疗", s: 0 },
+        { n: "守护屏障", c: 3, mp: 350, d: 0, e: "群体护盾", s: 0 },
+        { n: "圣光壁障", c: 4, mp: 380, d: 0, e: "单体护盾", s: 0 },
+        { n: "群体结界", c: 5, mp: 400, d: 0, e: "范围护盾", s: 0 },
+        { n: "圣光・万物复苏", c: 7, mp: 1000, d: -6.3, e: "终极治疗", s: 0 }
+    ],
+    passive(c) {
+        c.holyAffinity = 40; // 圣光亲和40%
+        c.holyResonance = false;
+        c.lifeGuardTriggers = 1; // 生命守护触发次数
+        c.lifeGuardUsed = 0;
+        c.lockHP = 1; // 免死机制
+        c.deathOnce = 1;
+        c.resurrectionUsed = false; // 复活被动使用次数
+        c.holyStacks = 0; // 圣光层数
+        c.maxHolyStacks = 5; // 最大圣光层数
+        
+        // 设置技能实现
+        c.skillImpl = {
+            "圣光脉冲": function(s, target, field) {
+                const heal = Math.floor(this.atk * -s.d * this.crit() * (1 + this.holyAffinity / 100));
+                const allies = field.filter(x => x.side === this.side);
+                let criticalHealCount = 0;
+                
+                allies.forEach(ally => {
+                    const finalHeal = roll(this.cr) ? Math.floor(heal * 1.5) : heal;
+                    ally.hp = clamp(ally.hp + finalHeal, 0, ally.maxhp);
+                    
+                    if (roll(this.cr)) {
+                        const shield = Math.floor(heal * 0.5);
+                        if (!ally.buffs["小额护盾"]) {
+                            ally.buffs["小额护盾"] = { st: 1, val: 0 };
+                        }
+                        ally.buffs["小额护盾"].val += shield;
+                        criticalHealCount++;
+                    }
+                });
+                
+                this.holyStacks = Math.min(this.holyStacks + 1, this.maxHolyStacks);
+                log(`<div class="healer">${this.getDisplayName()} 使用圣光脉冲，治疗全体友军 ${heal} HP，触发 ${criticalHealCount} 次暴击治疗，圣光层数: ${this.holyStacks}</div>`);
+                return true;
+            },
+            
+            "生命绑定": function(s, target, field) {
+                const heal = Math.floor(this.atk * -s.d * this.crit() * (1 + this.holyAffinity / 100));
+                target.hp = clamp(target.hp + heal, 0, target.maxhp);
+                
+                // 生命绑定效果
+                this.buffs["生命绑定"] = { st: 3, val: target };
+                target.buffs["生命链接"] = { st: 3, val: this };
+                
+                // 根据圣光层数增加效果
+                const extraHeal = Math.floor(heal * this.holyStacks * 0.1);
+                if (extraHeal > 0) {
+                    target.hp = clamp(target.hp + extraHeal, 0, target.maxhp);
+                    log(`<div class="healer">圣光层数额外治疗 ${target.getDisplayName()} ${extraHeal} HP</div>`);
+                }
+                
+                log(`<div class="healer">${this.getDisplayName()} 使用生命绑定，治疗 ${target.getDisplayName()} ${heal} HP，建立生命链接</div>`);
+                return true;
+            },
+            
+            "圣光净化": function(s, target, field) {
+                const heal = Math.floor(this.atk * -s.d * this.crit() * (1 + this.holyAffinity / 100));
+                const allies = field.filter(x => x.side === this.side);
+                let cleansedCount = 0;
+                
+                allies.forEach(ally => {
+                    ally.hp = clamp(ally.hp + heal, 0, ally.maxhp);
+                    
+                    // 驱散负面效果
+                    const debuffKeys = Object.keys(ally.debuffs);
+                    debuffKeys.forEach(debuff => {
+                        if (!debuff.includes("圣光")) {
+                            delete ally.debuffs[debuff];
+                            cleansedCount++;
+                        }
+                    });
+                });
+                
+                this.holyStacks = Math.min(this.holyStacks + 1, this.maxHolyStacks);
+                log(`<div class="healer">${this.getDisplayName()} 使用圣光净化，治疗全体 ${heal} HP，清除 ${cleansedCount} 个负面状态，圣光层数: ${this.holyStacks}</div>`);
+                return true;
+            },
+            
+            "守护屏障": function(s, target, field) {
+                const shield = Math.floor(this.atk * 2.5 * (1 + this.holyStacks * 0.1));
+                const allies = field.filter(x => x.side === this.side);
+                
+                allies.forEach(ally => {
+                    ally.buffs["守护屏障"] = { st: 3, val: shield };
+                    // 圣光层数额外效果
+                    if (this.holyStacks >= 3) {
+                        ally.buffs["屏障净化"] = { st: 2, val: 0 }; // 免疫控制
+                    }
+                });
+                
+                log(`<div class="healer">${this.getDisplayName()} 使用守护屏障，全队获得 ${shield} 点护盾${this.holyStacks >= 3 ? '和控制免疫' : ''}</div>`);
+                return true;
+            },
+            
+            "圣光壁障": function(s, target, field) {
+                const shield = Math.floor(this.atk * 3.5 * (1 + this.holyStacks * 0.15));
+                target.buffs["圣光壁障"] = { st: 4, val: shield };
+                target.buffs["壁障庇护"] = { st: 3, val: 40 }; // 受到伤害-40%
+                
+                // 高圣光层数额外效果
+                if (this.holyStacks >= 4) {
+                    target.buffs["圣光复苏"] = { st: 3, val: Math.floor(target.maxhp * 0.1) }; // 每回合恢复10%HP
+                }
+                
+                log(`<div class="healer">${this.getDisplayName()} 为 ${target.getDisplayName()} 施加圣光壁障，提供 ${shield} 点护盾和40%减伤</div>`);
+                return true;
+            },
+            
+            "群体结界": function(s, target, field) {
+                const shield = Math.floor(this.atk * 2 * (1 + this.holyStacks * 0.12));
+                const damageReduction = 25 + this.holyStacks * 3; // 基础25%，每层圣光+3%
+                const allies = field.filter(x => x.side === this.side);
+                
+                allies.forEach(ally => {
+                    ally.buffs["群体结界"] = { st: 4, val: shield };
+                    ally.buffs["结界减伤"] = { st: 4, val: damageReduction };
+                });
+                
+                // 激活圣光共鸣
+                if (this.holyStacks >= this.maxHolyStacks) {
+                    this.holyResonance = true;
+                    allies.forEach(ally => {
+                        ally.buffs["圣光共鸣"] = { st: 3, val: 20 }; // 全属性+20%
+                    });
+                    log(`<div class="healer">圣光层数已满，激活圣光共鸣！</div>`);
+                }
+                
+                log(`<div class="healer">${this.getDisplayName()} 使用群体结界，全队获得 ${shield} 点护盾和${damageReduction}%减伤</div>`);
+                return true;
+            },
+            
+            "圣光・万物复苏": function(s, target, field) {
+                const heal = Math.floor(this.atk * -s.d * this.crit() * (1 + this.holyAffinity / 100));
+                const shield = Math.floor(this.atk * 3.333 * 1.4 * (1 + this.holyStacks * 0.2));
+                const allies = field.filter(x => x.side === this.side);
+                
+                // 复活死亡的队友
+                const deadAllies = field.filter(x => x.side === this.side && x.hp <= 0);
+                deadAllies.forEach(ally => {
+                    ally.hp = Math.floor(ally.maxhp * 0.5);
+                    ally.mp = Math.floor(ally.maxmp * 0.3);
+                    ally.buffs["圣光复活"] = { st: 2, val: 0 };
+                    log(`<div class="healer">${ally.getDisplayName()} 被圣光复活！</div>`);
+                });
+                
+                // 治疗和护盾
+                allies.forEach(ally => {
+                    ally.hp = clamp(ally.hp + heal, 0, ally.maxhp);
+                    ally.buffs["永恒护盾"] = { st: 3, val: shield };
+                    // 清除所有负面状态
+                    Object.keys(ally.debuffs).forEach(debuff => {
+                        if (!debuff.includes("圣光")) {
+                            delete ally.debuffs[debuff];
+                        }
+                    });
+                });
+                
+                this.buffs["圣徒形态"] = { st: 2, val: 50 + this.holyStacks * 5 }; // 治疗量加成
+                this.holyStacks = this.maxHolyStacks; // 圣光层数叠满
+                
+                log(`<div class="healer">${this.getDisplayName()} 使用圣光・万物复苏，治疗全体 ${heal} HP，附加 ${shield} 点护盾，复活 ${deadAllies.length} 名队友</div>`);
+                return true;
+            }
+        };
+        
+        // 设置回合逻辑
+        c.turnImpl = function(field) {
+            // 圣光共鸣效果
+            if (this.holyResonance) {
+                const allies = field.filter(x => x.side === this.side);
+                const healAmount = Math.floor(this.atk * 0.4 * (1 + this.holyStacks * 0.1));
+                allies.forEach(ally => {
+                    ally.hp = clamp(ally.hp + healAmount, 0, ally.maxhp);
+                });
+                log(`<div class="healer">${this.getDisplayName()} 的圣光共鸣治疗全体 ${healAmount} HP</div>`);
+            }
+            
+            // 生命守护
+            const dyingAllies = field.filter(x => x.side === this.side && x.hp <= 0 && x.hp > -1000); // 刚刚死亡的队友
+            if (dyingAllies.length > 0 && this.lifeGuardUsed < this.lifeGuardTriggers) {
+                const target = dyingAllies[0];
+                const savedHP = Math.floor(target.maxhp * (0.3 + this.holyStacks * 0.02)); // 基础30%，每层圣光+2%
+                target.hp = clamp(target.hp + savedHP, 0, target.maxhp);
+                target.buffs["生命屏障"] = { st: 2, val: Math.floor(this.atk * 4 * 1.4) };
+                this.lifeGuardUsed++;
+                this.holyStacks = Math.min(this.holyStacks + 2, this.maxHolyStacks);
+                log(`<div class="healer">${this.getDisplayName()} 触发生命守护，拯救 ${target.getDisplayName()}，恢复${Math.floor((0.3 + this.holyStacks * 0.02) * 100)}%HP，圣光层数+2</div>`);
+            }
+            
+            // 生命绑定效果
+            if (this.buffs["生命绑定"]) {
+                const linkedTarget = this.buffs["生命绑定"].val;
+                if (linkedTarget && linkedTarget.hp > 0) {
+                    // 分担伤害
+                    const damageShare = 0.3; // 分担30%伤害
+                    if (this.damageTakenThisTurn > 0) {
+                        const sharedDamage = Math.floor(this.damageTakenThisTurn * damageShare);
+                        linkedTarget.hp = clamp(linkedTarget.hp - sharedDamage, 0, linkedTarget.maxhp);
+                        log(`<div class="healer">${this.getDisplayName()} 通过生命链接将 ${sharedDamage} 伤害转移给 ${linkedTarget.getDisplayName()}</div>`);
+                    }
+                }
+            }
+            
+            // 免死机制
+            if (this.hp <= 0 && this.lockHP && this.deathOnce) {
+                this.hp = 1;
+                this.deathOnce = 0;
+                this.buffs["圣光守护"] = { st: 2, val: 0 };
+                this.holyStacks = Math.min(this.holyStacks + 3, this.maxHolyStacks);
+                log(`<div class="healer">${this.getDisplayName()} 触发免死机制，锁血1点，圣光层数+3</div>`);
+            }
+            
+            // 重置伤害记录
+            this.damageTakenThisTurn = 0;
+        };
+        
+        log(`<div class="healer">${c.getDisplayName()} 圣光法师激活，圣光亲和: ${c.holyAffinity}%</div>`);
+    }
+};
+
+// === js/characters/tangtang.js ===
+// 棠棠 角色实现
+DB["棠棠"] = {
+    hp: 18000,
+    mp: 5200,
+    atk: 1800,
+    def: 1400,
+    spd: 140,
+    cr: 35,
+    cd: 220,
+    light: 400,
+    skills: [
+        { n: "圣剑・轻斩", c: 1, mp: 80, d: 2.8 * 1.6, e: "单体光伤", s: 1 },
+        { n: "圣剑・十字斩", c: 2, mp: 150, d: 1.6 * 1.6, e: "范围光伤", s: 1 },
+        { n: "圣剑・辉光刺", c: 3, mp: 220, d: 3 * 1.6, e: "单体爆发", s: 1 },
+        { n: "光明领域・庇护", c: 4, mp: 300, d: 0, e: "团队增益", s: 0 },
+        { n: "圣剑・领域斩", c: 5, mp: 380, d: 2.2 * 1.8, e: "范围爆发", s: 1 },
+        { n: "圣剑觉醒・辉光领域", c: 6, mp: 600, d: 0, e: "形态切换", s: 0 }
+    ],
+    passive(c) {
+        c.lightAffinity = 40; // 光明亲和40%
+        c.form = "常态"; // 形态：常态/领域
+        c.swordMarks = 0; // 圣剑印记
+        c.maxSwordMarks = 3;
+        c.lockHP = 1; // 免死机制
+        c.deathOnce = 1;
+        c.domainTurns = 0; // 领域形态剩余回合
+        c.swordEnergy = 0; // 圣剑能量
+        c.maxSwordEnergy = 100; // 最大圣剑能量
+        
+        // 设置技能实现
+        c.skillImpl = {
+            "圣剑・轻斩": function(s, target, field) {
+                const damage = Math.floor(this.atk * s.d * this.crit());
+                const actualDamage = target.processDamage(damage, this, s.n);
+                if (actualDamage > 0) {
+                    log(`<div class="light-sword">${this.getDisplayName()} 使用圣剑・轻斩对 ${target.getDisplayName()} 造成 ${actualDamage} 伤害</div>`);
+                }
+                
+                // 附加圣剑印记
+                if (roll(35)) {
+                    if (!target.debuffs["圣剑印记"]) {
+                        target.debuffs["圣剑印记"] = { st: 2, val: 0 };
+                    }
+                    target.debuffs["圣剑印记"].val = Math.min(target.debuffs["圣剑印记"].val + 1, this.maxSwordMarks);
+                    log(`<div class="light-sword">${target.getDisplayName()} 获得 ${target.debuffs["圣剑印记"].val} 层圣剑印记</div>`);
+                }
+                
+                // 普攻追加
+                if (roll(40)) {
+                    const extraDamage = Math.floor(this.atk * 1.2 * 1.6 * this.crit());
+                    const actualExtraDamage = target.processDamage(extraDamage, this, s.n);
+                    if (actualExtraDamage > 0) {
+                        log(`<div class="light-sword">${this.getDisplayName()} 触发圣剑刺击，追加 ${actualExtraDamage} 伤害</div>`);
+                    }
+                }
+                
+                // 积累圣剑能量
+                this.swordEnergy = Math.min(this.swordEnergy + 10, this.maxSwordEnergy);
+                return true;
+            },
+            
+            "圣剑・十字斩": function(s, target, field) {
+                const enemies = field.filter(x => x.side !== this.side && x.hp > 0).slice(0, 3);
+                let totalDamage = 0;
+                
+                enemies.forEach(enemy => {
+                    const damage = Math.floor(this.atk * s.d * this.crit());
+                    const actualDamage = enemy.processDamage(damage, this, s.n);
+                    totalDamage += actualDamage;
+                    
+                    // 附加圣剑印记
+                    if (roll(25)) {
+                        if (!enemy.debuffs["圣剑印记"]) {
+                            enemy.debuffs["圣剑印记"] = { st: 2, val: 0 };
+                        }
+                        enemy.debuffs["圣剑印记"].val = Math.min(enemy.debuffs["圣剑印记"].val + 1, this.maxSwordMarks);
+                    }
+                });
+                
+                if (totalDamage > 0) {
+                    log(`<div class="light-sword">${this.getDisplayName()} 使用圣剑・十字斩对3名敌人造成总计 ${totalDamage} 伤害</div>`);
+                }
+                
+                // 积累圣剑能量
+                this.swordEnergy = Math.min(this.swordEnergy + 15, this.maxSwordEnergy);
+                return true;
+            },
+            
+            "圣剑・辉光刺": function(s, target, field) {
+                // 根据圣剑印记增加伤害
+                const swordStacks = target.debuffs["圣剑印记"]?.val || 0;
+                const swordBonus = 1 + (swordStacks * 0.2);
+                const damage = Math.floor(this.atk * s.d * this.crit() * swordBonus);
+                const actualDamage = target.processDamage(damage, this, s.n);
+                
+                if (actualDamage > 0) {
+                    log(`<div class="light-sword">${this.getDisplayName()} 使用圣剑・辉光刺对 ${target.getDisplayName()} 造成 ${actualDamage} 伤害 (圣剑印记加成: ${Math.floor((swordBonus - 1) * 100)}%)</div>`);
+                }
+                
+                // 消耗圣剑印记造成额外效果
+                if (swordStacks > 0) {
+                    const extraEffect = Math.floor(this.atk * 0.8 * swordStacks);
+                    target.hp = clamp(target.hp - extraEffect, 0, target.maxhp);
+                    log(`<div class="light-sword">消耗 ${swordStacks} 层圣剑印记，造成 ${extraEffect} 额外伤害`);
+                    delete target.debuffs["圣剑印记"];
+                }
+                
+                // 积累圣剑能量
+                this.swordEnergy = Math.min(this.swordEnergy + 25, this.maxSwordEnergy);
+                return true;
+            },
+            
+            "光明领域・庇护": function(s, target, field) {
+                const allies = field.filter(x => x.side === this.side);
+                const defBonus = 20 + Math.floor(this.swordEnergy / 10); // 基础20%，每10能量+1%
+                const healAmount = Math.floor(this.atk * 1.2);
+                
+                allies.forEach(ally => {
+                    ally.buffs["光明庇护"] = { st: 3, val: defBonus }; // 防御加成
+                    ally.hp = clamp(ally.hp + healAmount, 0, ally.maxhp);
+                    ally.buffs["圣光治愈"] = { st: 2, val: Math.floor(healAmount * 0.5) }; // 持续治疗
+                });
+                
+                log(`<div class="light-sword">${this.getDisplayName()} 使用光明领域・庇护，全队防御提升${defBonus}%，恢复 ${healAmount} HP</div>`);
+                return true;
+            },
+            
+            "圣剑・领域斩": function(s, target, field) {
+                // 领域形态下效果增强
+                const isDomainForm = this.form === "领域";
+                const damageMultiplier = isDomainForm ? 1.3 : 1;
+                
+                const enemies = field.filter(x => x.side !== this.side && x.hp > 0);
+                let totalDamage = 0;
+                
+                enemies.forEach(enemy => {
+                    const damage = Math.floor(this.atk * s.d * this.crit() * damageMultiplier);
+                    const actualDamage = enemy.processDamage(damage, this, s.n);
+                    totalDamage += actualDamage;
+                    
+                    // 领域形态下附加效果
+                    if (isDomainForm) {
+                        enemy.debuffs["光耀灼烧"] = { st: 2, val: Math.floor(this.atk * 0.4) };
+                        if (roll(30)) {
+                            enemy.debuffs["致盲"] = { st: 1, val: 0 }; // 致盲1回合
+                        }
+                    }
+                });
+                
+                if (totalDamage > 0) {
+                    log(`<div class="light-sword">${this.getDisplayName()} 使用圣剑・领域斩对全体敌人造成 ${totalDamage} 伤害${isDomainForm ? '并附加光耀灼烧' : ''}</div>`);
+                }
+                
+                // 消耗圣剑能量
+                if (this.swordEnergy >= 30) {
+                    this.swordEnergy -= 30;
+                    const energyBonus = Math.floor(totalDamage * 0.2);
+                    enemies.forEach(enemy => {
+                        enemy.hp = clamp(enemy.hp - energyBonus, 0, enemy.maxhp);
+                    });
+                    log(`<div class="light-sword">消耗30点圣剑能量，造成 ${energyBonus} 额外伤害</div>`);
+                }
+                
+                return true;
+            },
+            
+            "圣剑觉醒・辉光领域": function(s, target, field) {
+                if (this.swordEnergy < this.maxSwordEnergy) {
+                    log(`<div class="light-sword">圣剑能量不足，无法觉醒！当前能量: ${this.swordEnergy}/${this.maxSwordEnergy}</div>`);
+                    return false;
+                }
+                
+                this.form = "领域";
+                this.domainTurns = 4;
+                this.atk = Math.floor(this.atk * 1.3); // 攻击力+30%
+                this.cd = 260; // 暴击伤害提升至260%
+                this.swordEnergy = 0; // 消耗所有能量
+                
+                // 领域激活效果
+                const allies = field.filter(x => x.side === this.side);
+                const domainShield = Math.floor(this.atk * 2.5);
+                allies.forEach(ally => {
+                    ally.buffs["辉光领域"] = { st: 4, val: 25 }; // 全属性+25%
+                    ally.buffs["领域护盾"] = { st: 4, val: domainShield };
+                });
+                
+                log(`<div class="light-sword">${this.getDisplayName()} 使用圣剑觉醒・辉光领域，进入领域形态，攻击力+30%，全队获得增益</div>`);
+                return true;
+            }
+        };
+        
+        // 设置回合逻辑
+        c.turnImpl = function(field) {
+            // 领域形态维持
+            if (this.form === "领域") {
+                this.domainTurns--;
+                this.mp -= 300;
+                
+                if (this.mp < 300 || this.domainTurns <= 0) {
+                    this.form = "常态";
+                    this.atk = 1800; // 恢复基础攻击力
+                    this.cd = 220; // 恢复基础暴击伤害
+                    log(`<div class="light-sword">${this.getDisplayName()} 退出领域形态</div>`);
+                } else {
+                    // 领域形态持续效果
+                    const enemies = field.filter(x => x.side !== this.side && x.hp > 0);
+                    const domainDamage = Math.floor(this.atk * 0.3);
+                    enemies.forEach(enemy => {
+                        enemy.hp = clamp(enemy.hp - domainDamage, 0, enemy.maxhp);
+                    });
+                    log(`<div class="light-sword">${this.getDisplayName()} 的辉光领域造成 ${domainDamage} 伤害</div>`);
+                }
+            }
+            
+            // 圣剑能量自然增长
+            if (this.swordEnergy < this.maxSwordEnergy) {
+                this.swordEnergy = Math.min(this.swordEnergy + 5, this.maxSwordEnergy);
+            }
+            
+            // 圣剑印记效果
+            const enemiesWithMarks = field.filter(x => x.side !== this.side && x.debuffs["圣剑印记"]);
+            enemiesWithMarks.forEach(enemy => {
+                const stacks = enemy.debuffs["圣剑印记"].val;
+                if (stacks >= 2) {
+                    // 降低防御
+                    if (!enemy.debuffs["圣剑威压"]) {
+                        enemy.debuffs["圣剑威压"] = { st: 1, val: stacks * 10 }; // 每层降低10%防御
+                    }
+                }
+            });
+            
+            // 免死机制
+            if (this.hp <= 0 && this.lockHP && this.deathOnce) {
+                this.hp = 1;
+                this.deathOnce = 0;
+                this.buffs["圣剑屏障"] = { st: 1, val: 0 };
+                this.hp = clamp(this.hp + this.maxhp * 0.3, 0, this.maxhp);
+                this.swordEnergy = this.maxSwordEnergy; // 圣剑能量充满
+                
+                // 刷新冷却最短的技能
+                let minCD = 999;
+                let minSkill = null;
+                Object.keys(this.cooldowns).forEach(skill => {
+                    if (this.cooldowns[skill] < minCD && this.cooldowns[skill] > 0) {
+                        minCD = this.cooldowns[skill];
+                        minSkill = skill;
+                    }
+                });
+                if (minSkill) this.cooldowns[minSkill] = 0;
+                
+                log(`<div class="light-sword">${this.getDisplayName()} 触发免死机制，锁血1点并恢复30%HP，圣剑能量充满</div>`);
+            }
+        };
+        
+        log(`<div class="light-sword">${c.getDisplayName()} 光明圣剑使激活，光明亲和: ${c.lightAffinity}%</div>`);
+    }
+};
+
+// === js/characters/tanghuang.js ===
+// 棠皇 角色实现
+DB["棠皇"] = {
+    hp: 24000,
+    mp: 6000,
+    atk: 2000,
+    def: 1900,
+    spd: 75,
+    cr: 25,
+    cd: 200,
+    element: 550,
+    skills: [
+        { n: "焚天龙息", c: 3, mp: 400, d: 2.2 * 1.55, e: "范围火伤", s: 1 },
+        { n: "火爪撕裂", c: 2, mp: 280, d: 2.4 * 1.55, e: "单体混合", s: 1 },
+        { n: "火域燎原", c: 5, mp: 500, d: 1.5 * 1.55, e: "领域火伤", s: 1 },
+        { n: "雷暴龙息", c: 4, mp: 450, d: 2.1 * 1.55, e: "范围雷伤", s: 1 },
+        { n: "雷霆撕咬", c: 3, mp: 320, d: 2.6 * 1.55, e: "单体混合", s: 1 },
+        { n: "雷域禁锢", c: 6, mp: 550, d: 1.4 * 1.55, e: "领域雷伤", s: 1 },
+        { n: "火雷灭世・巨龙降临", c: 8, mp: 1200, d: 3.2 * 1.55, e: "终极爆发", s: 1 }
+    ],
+    passive(c) {
+        c.elementConcentration = 55; // 元素浓度55%
+        c.form = "火核"; // 形态：火核/雷核/双核
+        c.fireMarks = 0; // 火焰印记
+        c.thunderMarks = 0; // 雷霆印记
+        c.maxMarks = 3;
+        c.dragonRage = false; // 巨龙狂怒
+        c.lockHP = 1; // 免死机制
+        c.deathOnce = 1;
+        c.doubleCoreTurns = 0; // 双核形态剩余回合
+        c.elementEnergy = 0; // 元素能量
+        c.maxElementEnergy = 200; // 最大元素能量
+        
+        // 设置技能实现
+        c.skillImpl = {
+            "焚天龙息": function(s, target, field) {
+                const enemies = field.filter(x => x.side !== this.side && x.hp > 0).slice(0, 5);
+                let totalDamage = 0;
+                
+                enemies.forEach(enemy => {
+                    const damage = Math.floor(this.atk * s.d * this.crit());
+                    const actualDamage = enemy.processDamage(damage, this, s.n);
+                    totalDamage += actualDamage;
+                    
+                    // 附加火焰印记
+                    if (!enemy.debuffs["火焰印记"]) {
+                        enemy.debuffs["火焰印记"] = { st: 2, val: 0 };
+                    }
+                    enemy.debuffs["火焰印记"].val = Math.min(enemy.debuffs["火焰印记"].val + 1, this.maxMarks);
+                    
+                    // 火核形态额外效果
+                    if (this.form === "火核" && roll(40)) {
+                        enemy.debuffs["灼烧"] = { st: 3, val: Math.floor(this.atk * 0.5) };
+                    }
+                });
+                
+                if (totalDamage > 0) {
+                    log(`<div class="dragon">${this.getDisplayName()} 使用焚天龙息对5名敌人造成总计 ${totalDamage} 伤害</div>`);
+                }
+                
+                // 积累元素能量
+                this.elementEnergy = Math.min(this.elementEnergy + 15, this.maxElementEnergy);
+                return true;
+            },
+            
+            "火爪撕裂": function(s, target, field) {
+                const damage = Math.floor(this.atk * s.d * this.crit());
+                const actualDamage = target.processDamage(damage, this, s.n);
+                if (actualDamage > 0) {
+                    log(`<div class="dragon">${this.getDisplayName()} 使用火爪撕裂对 ${target.getDisplayName()} 造成 ${actualDamage} 伤害</div>`);
+                }
+                
+                // 附加流血效果
+                target.debuffs["撕裂"] = { st: 3, val: Math.floor(this.atk * 0.6) };
+                
+                // 根据火焰印记增加伤害
+                const fireStacks = target.debuffs["火焰印记"]?.val || 0;
+                if (fireStacks > 0) {
+                    const extraDamage = Math.floor(this.atk * 0.4 * fireStacks);
+                    target.hp = clamp(target.hp - extraDamage, 0, target.maxhp);
+                    log(`<div class="dragon">火焰印记爆发，造成 ${extraDamage} 额外伤害</div>`);
+                }
+                
+                // 积累元素能量
+                this.elementEnergy = Math.min(this.elementEnergy + 10, this.maxElementEnergy);
+                return true;
+            },
+            
+            "火域燎原": function(s, target, field) {
+                // 切换到火核形态
+                this.form = "火核";
+                this.buffs["火核形态"] = { st: 4, val: 25 }; // 火伤+25%
+                
+                const enemies = field.filter(x => x.side !== this.side && x.hp > 0);
+                let totalDamage = 0;
+                
+                enemies.forEach(enemy => {
+                    const damage = Math.floor(this.atk * s.d * this.crit());
+                    const actualDamage = enemy.processDamage(damage, this, s.n);
+                    totalDamage += actualDamage;
+                    
+                    // 强制叠加火焰印记
+                    if (!enemy.debuffs["火焰印记"]) {
+                        enemy.debuffs["火焰印记"] = { st: 3, val: 0 };
+                    }
+                    enemy.debuffs["火焰印记"].val = this.maxMarks;
+                    
+                    // 高概率灼烧
+                    if (roll(70)) {
+                        enemy.debuffs["烈火灼烧"] = { st: 3, val: Math.floor(this.atk * 0.8) };
+                    }
+                });
+                
+                // 创造火域
+                this.buffs["火域"] = { st: 3, val: 0 };
+                
+                log(`<div class="dragon">${this.getDisplayName()} 使用火域燎原，造成总计 ${totalDamage} 伤害，切换到火核形态并创造火域</div>`);
+                return true;
+            },
+            
+            "雷暴龙息": function(s, target, field) {
+                const enemies = field.filter(x => x.side !== this.side && x.hp > 0).slice(0, 4);
+                let totalDamage = 0;
+                
+                enemies.forEach(enemy => {
+                    const damage = Math.floor(this.atk * s.d * this.crit());
+                    const actualDamage = enemy.processDamage(damage, this, s.n);
+                    totalDamage += actualDamage;
+                    
+                    // 附加雷霆印记
+                    if (!enemy.debuffs["雷霆印记"]) {
+                        enemy.debuffs["雷霆印记"] = { st: 2, val: 0 };
+                    }
+                    enemy.debuffs["雷霆印记"].val = Math.min(enemy.debuffs["雷霆印记"].val + 1, this.maxMarks);
+                    
+                    // 雷核形态额外效果
+                    if (this.form === "雷核" && roll(35)) {
+                        enemy.debuffs["麻痹"] = { st: 2, val: 30 }; // 减速30%
+                    }
+                });
+                
+                if (totalDamage > 0) {
+                    log(`<div class="dragon">${this.getDisplayName()} 使用雷暴龙息对4名敌人造成总计 ${totalDamage} 伤害</div>`);
+                }
+                
+                // 积累元素能量
+                this.elementEnergy = Math.min(this.elementEnergy + 15, this.maxElementEnergy);
+                return true;
+            },
+            
+            "雷霆撕咬": function(s, target, field) {
+                const damage = Math.floor(this.atk * s.d * this.crit());
+                const actualDamage = target.processDamage(damage, this, s.n);
+                if (actualDamage > 0) {
+                    log(`<div class="dragon">${this.getDisplayName()} 使用雷霆撕咬对 ${target.getDisplayName()} 造成 ${actualDamage} 伤害</div>`);
+                }
+                
+                // 根据雷霆印记增加效果
+                const thunderStacks = target.debuffs["雷霆印记"]?.val || 0;
+                if (thunderStacks > 0) {
+                    // 破防效果
+                    target.debuffs["雷击破防"] = { st: 2, val: thunderStacks * 15 }; // 每层降低15%防御
+                    
+                    // 高印记概率眩晕
+                    if (thunderStacks >= 2 && roll(50)) {
+                        target.debuffs["眩晕"] = { st: 1, val: 0 };
+                        log(`<div class="dragon">${target.getDisplayName()} 被雷霆震晕！</div>`);
+                    }
+                }
+                
+                // 积累元素能量
+                this.elementEnergy = Math.min(this.elementEnergy + 10, this.maxElementEnergy);
+                return true;
+            },
+            
+            "雷域禁锢": function(s, target, field) {
+                // 切换到雷核形态
+                this.form = "雷核";
+                this.buffs["雷核形态"] = { st: 4, val: 20 }; // 速度+20%
+                
+                const enemies = field.filter(x => x.side !== this.side && x.hp > 0);
+                
+                enemies.forEach(enemy => {
+                    const damage = Math.floor(this.atk * s.d * this.crit());
+                    const actualDamage = enemy.processDamage(damage, this, s.n);
+                    if (actualDamage > 0) {
+                        log(`<div class="dragon">${this.getDisplayName()} 使用雷域禁锢对 ${enemy.getDisplayName()} 造成 ${actualDamage} 伤害</div>`);
+                    }
+                    
+                    // 强制叠加雷霆印记和禁锢
+                    if (!enemy.debuffs["雷霆印记"]) {
+                        enemy.debuffs["雷霆印记"] = { st: 3, val: 0 };
+                    }
+                    enemy.debuffs["雷霆印记"].val = this.maxMarks;
+                    enemy.debuffs["雷域禁锢"] = { st: 2, val: 0 }; // 无法行动2回合
+                });
+                
+                // 创造雷域
+                this.buffs["雷域"] = { st: 3, val: 0 };
+                
+                log(`<div class="dragon">${this.getDisplayName()} 使用雷域禁锢，切换到雷核形态并禁锢所有敌人</div>`);
+                return true;
+            },
+            
+            "火雷灭世・巨龙降临": function(s, target, field) {
+                if (this.elementEnergy < this.maxElementEnergy) {
+                    log(`<div class="dragon">元素能量不足，无法释放终极技能！当前能量: ${this.elementEnergy}/${this.maxElementEnergy}</div>`);
+                    return false;
+                }
+                
+                this.form = "双核";
+                this.doubleCoreTurns = 5;
+                const shield = Math.floor(this.atk * 4.5);
+                this.buffs["火雷护盾"] = { st: 3, val: shield };
+                
+                const enemies = field.filter(x => x.side !== this.side && x.hp > 0);
+                let totalDamage = 0;
+                
+                enemies.forEach(enemy => {
+                    const damage = Math.floor(this.atk * s.d * this.crit());
+                    const actualDamage = enemy.processDamage(damage, this, s.n);
+                    totalDamage += actualDamage;
+                    
+                    // 叠加双元素印记
+                    if (!enemy.debuffs["火焰印记"]) {
+                        enemy.debuffs["火焰印记"] = { st: 3, val: 0 };
+                    }
+                    if (!enemy.debuffs["雷霆印记"]) {
+                        enemy.debuffs["雷霆印记"] = { st: 3, val: 0 };
+                    }
+                    enemy.debuffs["火焰印记"].val = this.maxMarks;
+                    enemy.debuffs["雷霆印记"].val = this.maxMarks;
+                    
+                    // 双核特效
+                    enemy.debuffs["元素混乱"] = { st: 3, val: 40 }; // 全属性-40%
+                });
+                
+                // 双核形态下技能冷却缩短30%，火雷伤害额外+25%
+                this.buffs["双核形态"] = { st: 5, val: 25 };
+                
+                // 消耗元素能量
+                this.elementEnergy = 0;
+                
+                log(`<div class="dragon">${this.getDisplayName()} 使用火雷灭世・巨龙降临，造成总计 ${totalDamage} 伤害，进入双核形态，获得 ${shield} 点护盾</div>`);
+                return true;
+            }
+        };
+        
+        // 设置回合逻辑
+        c.turnImpl = function(field) {
+            // 双核形态维持
+            if (this.form === "双核") {
+                this.doubleCoreTurns--;
+                if (this.doubleCoreTurns <= 0) {
+                    this.form = "火核";
+                    log(`<div class="dragon">${this.getDisplayName()} 退出双核形态</div>`);
+                } else {
+                    // 双核形态持续效果
+                    const enemies = field.filter(x => x.side !== this.side && x.hp > 0);
+                    const dualDamage = Math.floor(this.atk * 0.5);
+                    enemies.forEach(enemy => {
+                        enemy.hp = clamp(enemy.hp - dualDamage, 0, enemy.maxhp);
+                    });
+                    log(`<div class="dragon">${this.getDisplayName()} 的双核能量造成 ${dualDamage} 伤害</div>`);
+                }
+            }
+            
+            // 巨龙狂怒
+            if (this.hp < this.maxhp * 0.35 && !this.dragonRage) {
+                this.dragonRage = true;
+                this.buffs["巨龙狂怒"] = { st: 999, val: 30 }; // 火雷伤害+30%
+                this.def = Math.floor(this.def * 1.2); // 防御+20%
+                this.atk = Math.floor(this.atk * 1.15); // 攻击+15%
+                log(`<div class="dragon">${this.getDisplayName()} 触发巨龙狂怒，伤害和防御大幅提升！</div>`);
+            }
+            
+            // 元素印记效果
+            const enemiesWithFire = field.filter(x => x.side !== this.side && x.debuffs["火焰印记"]);
+            const enemiesWithThunder = field.filter(x => x.side !== this.side && x.debuffs["雷霆印记"]);
+            
+            // 火焰印记持续伤害
+            enemiesWithFire.forEach(enemy => {
+                const fireStacks = enemy.debuffs["火焰印记"].val;
+                if (fireStacks > 0) {
+                    const fireDamage = Math.floor(this.atk * 0.2 * fireStacks);
+                    enemy.hp = clamp(enemy.hp - fireDamage, 0, enemy.maxhp);
+                }
+            });
+            
+            // 雷霆印记效果
+            enemiesWithThunder.forEach(enemy => {
+                const thunderStacks = enemy.debuffs["雷霆印记"].val;
+                if (thunderStacks >= 2) {
+                    // 降低速度
+                    if (!enemy.debuffs["雷电阻滞"]) {
+                        enemy.debuffs["雷电阻滞"] = { st: 1, val: thunderStacks * 10 }; // 每层降低10%速度
+                    }
+                }
+            });
+            
+            // 元素能量自然增长
+            if (this.elementEnergy < this.maxElementEnergy) {
+                this.elementEnergy = Math.min(this.elementEnergy + 8, this.maxElementEnergy);
+            }
+            
+            // 元素重生
+            if (this.hp <= 0 && this.lockHP && this.deathOnce) {
+                this.hp = 1;
+                this.deathOnce = 0;
+                
+                // 引爆所有印记
+                const enemies = field.filter(x => x.side !== this.side && x.hp > 0);
+                let explosionDamage = 0;
+                
+                enemies.forEach(enemy => {
+                    const fireStacks = enemy.debuffs["火焰印记"]?.val || 0;
+                    const thunderStacks = enemy.debuffs["雷霆印记"]?.val || 0;
+                    const totalDamage = Math.floor(this.atk * 0.8 * 1.55 * (fireStacks + thunderStacks));
+                    enemy.hp = clamp(enemy.hp - totalDamage, 0, enemy.maxhp);
+                    explosionDamage += totalDamage;
+                    
+                    // 清除印记
+                    delete enemy.debuffs["火焰印记"];
+                    delete enemy.debuffs["雷霆印记"];
+                });
+                
+                // 重置技能冷却
+                Object.keys(this.cooldowns).forEach(skill => {
+                    this.cooldowns[skill] = 0;
+                });
+                
+                // 进入双核形态
+                this.form = "双核";
+                this.doubleCoreTurns = 3;
+                
+                log(`<div class="dragon">${this.getDisplayName()} 触发元素重生，锁血1点，引爆所有印记造成 ${explosionDamage} 伤害，进入双核形态</div>`);
+            }
+        };
+        
+        log(`<div class="dragon">${c.getDisplayName()} 炽雷灭世龙激活，元素浓度: ${c.elementConcentration}%</div>`);
+    }
+};
+
+// === js/main.js ===
+// 全局变量
+let currentBattleField = [];
+
+// 初始化
+document.addEventListener('DOMContentLoaded', function() {
+    updateTeamSelectors();
+    
+    // 事件监听
+    document.getElementById('mode').addEventListener('change', updateTeamSelectors);
+    document.getElementById('startBattle').addEventListener('click', startBattle);
+    document.getElementById('addCustomChar').addEventListener('click', addCustomChar);
+});
+
+/* ---------- 队伍创建 ---------- */
+function makeTeam(names, side) {
+    return names.map(n => {
+        const base = DB[n] || DB[Object.keys(DB)[0]];
+        const c = new Character(n, base);
+        c.side = side;
+        c.gender = rand(2) ? "男" : "女";
+        c.tag = "";
+        return c;
+    });
+}
+
+/* ---------- 新建角色 ---------- */
+function addCustomChar() {
+    const name = prompt("角色名:");
+    if (!name) return;
+    const hp = +prompt("HP", 12000);
+    const mp = +prompt("MP", 8000);
+    const atk = +prompt("ATK", 2000);
+    const def = +prompt("DEF", 1200);
+    const spd = +prompt("SPD", 160);
+    const cr = +prompt("暴击率%", 30);
+    const cd = +prompt("暴击伤害%", 200);
+    
+    DB[name] = {
+        hp, mp, atk, def, spd, cr, cd,
+        skills: [{ n: "普攻", c: 1, mp: 0, d: 1, e: "", s: 0 }],
+        passive() { }
+    };
+    
+    log(`已新建角色 ${name}`);
+    updateTeamSelectors();
+}
+
+/* ---------- 队伍选择器 ---------- */
+function updateTeamSelectors() {
+    const mode = +document.getElementById("mode").value;
+    const teamA = document.getElementById("teamA-selectors");
+    const teamB = document.getElementById("teamB-selectors");
+    
+    teamA.innerHTML = "";
+    teamB.innerHTML = "";
+    
+    const names = Object.keys(DB);
+    
+    for (let i = 0; i < mode; i++) {
+        const selectorA = document.createElement("div");
+        selectorA.className = "char-selector";
+        selectorA.innerHTML = `
+            <label>角色 ${i + 1}:
+                <select id="teamA-char${i}">
+                    ${names.map(n => `<option value="${n}">${n}</option>`).join("")}
+                </select>
+            </label>
+        `;
+        teamA.appendChild(selectorA);
+        
+        const selectorB = document.createElement("div");
+        selectorB.className = "char-selector";
+        selectorB.innerHTML = `
+            <label>角色 ${i + 1}:
+                <select id="teamB-char${i}">
+                    ${names.map(n => `<option value="${n}">${n}</option>`).join("")}
+                </select>
+            </label>
+        `;
+        teamB.appendChild(selectorB);
+    }
+}
+
+/* ---------- 开始战斗 ---------- */
+async function startBattle() {
+    const mode = +document.getElementById("mode").value;
+    
+    // 获取队伍A的选择
+    const teamANames = [];
+    for (let i = 0; i < mode; i++) {
+        const select = document.getElementById(`teamA-char${i}`);
+        teamANames.push(select.value);
+    }
+    
+    // 获取队伍B的选择
+    const teamBNames = [];
+    for (let i = 0; i < mode; i++) {
+        const select = document.getElementById(`teamB-char${i}`);
+        teamBNames.push(select.value);
+    }
+    
+    const t1 = makeTeam(teamANames, "A");
+    const t2 = makeTeam(teamBNames, "B");
+    
+    document.getElementById("teams").innerHTML = "";
+    renderTeam(t1, "teamA");
+    renderTeam(t2, "teamB");
+    log(`=== ${mode}v${mode} 战斗开始 ===`);
+    log(`队伍A: ${teamANames.join(", ")}`);
+    log(`队伍B: ${teamBNames.join(", ")}`);
+    await runBattle(t1, t2);
+}
+
+function renderTeam(team, id) {
+    const div = document.createElement("div");
+    div.className = "team";
+    div.id = id;
+    team.forEach(c => {
+        const d = document.createElement("div");
+        d.className = "char";
+        d.innerHTML = `
+            <div class="name">${c.getDisplayName()}</div>
+            <div>HP: <span class="hp">${c.hp}</span>/${c.maxhp}</div>
+            <div>MP: <span class="mp">${c.mp}</span>/${c.maxmp}</div>
+            <div>ATK: ${c.atk} DEF: ${c.def} SPD: ${c.spd}</div>
+            <div>暴击: ${c.cr}% 暴伤: ${c.cd}%</div>
+        `;
+        div.appendChild(d);
+    });
+    document.getElementById("teams").appendChild(div);
+}
+
+async function runBattle(t1, t2) {
+    const all = [...t1, ...t2];
+    all.forEach(c => c.resetCD());
+    let round = 0;
+    const maxRounds = 50;
+    
+    while (round < maxRounds) {
+        round++;
+        log(`--- 第${round}回合 ---`);
+        all.sort((a, b) => b.spd - a.spd);
+        
+        for (const c of all) {
+            if (c.hp <= 0) continue;
+            c.turn(all);
+            const foes = all.filter(x => x.side !== c.side && x.hp > 0);
+            if (foes.length === 0) { log(`侧${c.side}胜利`); return; }
+            const act = c.chooseAction(foes);
+            
+            if (act.act === "skill") {
+                c.useSkill(act.skill, act.target, all);
+            } else if (act.act === "multi_skill") {
+                log(`<div class="special-turn">${c.getDisplayName()}一回合释放多个技能: ${act.skills.map(s => s.n).join(", ")}</div>`);
+                for (const skill of act.skills) {
+                    c.useSkill(skill, act.target, all);
+                    await sleep(300);
+                }
+            }
+            await sleep(300);
+        }
+        
+        all.forEach(c => log(c.report()));
+        const aAlive = t1.some(c => c.hp > 0);
+        const bAlive = t2.some(c => c.hp > 0);
+        if (!aAlive && !bAlive) { log("平局"); return; }
+        if (!aAlive) { log("B队胜利"); return; }
+        if (!bAlive) { log("A队胜利"); return; }
+        await sleep(500);
+    }
+    
+    log(`战斗超时（${maxRounds}回合），平局`);
+}
+    </script>
+</body>
+</html>
