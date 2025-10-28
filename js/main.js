@@ -145,7 +145,7 @@ async function runBattle(t1, t2) {
             if (c.hp <= 0) continue;
             c.turn(all);
             const foes = all.filter(x => x.side !== c.side && x.hp > 0);
-            if (foes.length === 0) { log(`侧${c.side}胜利`); return; }
+            if (foes.length === 0) { log(`${c.side}队胜利`); return; }
             const act = c.chooseAction(foes);
             
             if (act.act === "skill") {

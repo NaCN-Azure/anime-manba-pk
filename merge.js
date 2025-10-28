@@ -7,31 +7,39 @@ class BattleGameBundler {
     this.outputFile = path.join(this.rootDir, 'battle-game-complete.html');
   }
 
-  // 获取JS文件的依赖顺序
-  getJSDependencyOrder() {
-    return [
-      'js/utils.js',
-      'js/character.js',
-      // 角色文件（按照原始HTML中的顺序）
-      'js/characters/aaa.js',
-      'js/characters/akeman.js',
-      'js/characters/bench.js',
-      'js/characters/huangye.js',
-      'js/characters/xiaomo.js',
-      'js/characters/dongji.js',
-      'js/characters/yunli.js',
-      'js/characters/setsuna.js',
-      'js/characters/robin.js',
-      'js/characters/legeng.js',
-      'js/characters/johnson.js',
-      'js/characters/zhanlan.js',
-      'js/characters/naitang.js',
-      'js/characters/tangtang.js',
-      'js/characters/tanghuang.js',
-      // 主逻辑最后
-      'js/main.js'
-    ];
+ // 获取JS文件的依赖顺序
+getJSDependencyOrder() {
+  const fs = require('fs');
+  const path = require('path');
+  
+  // 基础依赖文件（固定顺序）
+  const baseDependencies = [
+    'js/utils.js',
+    'js/character.js'
+  ];
+  
+  // 动态获取角色文件
+  const charactersDir = path.join(this.rootDir, 'js', 'characters');
+  let characterFiles = [];
+  
+  if (fs.existsSync(charactersDir)) {
+    characterFiles = fs.readdirSync(charactersDir)
+      .filter(file => 
+        file.endsWith('.js') && 
+        !file.startsWith('_')  // 排除_开头的文件
+      )
+      .sort()  
+      .map(file => path.join('js', 'characters', file));
+  } else {
+    console.warn('⚠️  characters目录不存在');
   }
+  
+  // 主逻辑文件
+  const mainFile = 'js/main.js';
+  
+  // 合并所有文件
+  return [...baseDependencies, ...characterFiles, mainFile];
+}
 
   // 读取文件内容
   readFile(filePath) {
